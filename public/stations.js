@@ -54,7 +54,7 @@ function render(stations) {
 function renderCard(s) {
   const a = document.createElement("a");
   a.className = "station-card";
-  a.href = `/?place=${encodeURIComponent(s.name)}&station_id=${s.id}`;
+  a.href = `/forecast.html?place=${encodeURIComponent(s.name)}&station_id=${s.id}`;
 
   const category = conditionCategory(s.condition);
   const hh = s.time ? String(new Date(s.time).getUTCHours()).padStart(2, "0") + ":00" : "—";

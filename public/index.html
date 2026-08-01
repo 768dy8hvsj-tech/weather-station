@@ -7,37 +7,23 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div class="page">
+  <div class="page page-wide">
     <header class="topbar">
       <div class="topbar-row">
         <div>
-          <h1>Weather Consensus</h1>
-          <p class="subtitle">Blends yr.no, the Icelandic Met Office, and Open-Meteo's ECMWF/GFS/ICON models into one forecast.</p>
+          <h1>Iceland Stations</h1>
+          <p class="subtitle">Next-hour conditions at a glance, from the Icelandic Met Office's own network.</p>
         </div>
-        <a class="nav-link" href="/stations.html">All stations →</a>
+        <a class="nav-link" href="/forecast.html">Detailed forecast →</a>
       </div>
+      <p id="updated-at" class="updated-at"></p>
     </header>
-
-    <div class="search-wrap">
-      <input id="search-input" type="text" placeholder="Search a place in Iceland (e.g. Húsafell, Ásbyrgi, Reykjavík)" autocomplete="off" />
-      <div id="suggestions" class="suggestions hidden"></div>
-    </div>
 
     <div id="status" class="status hidden"></div>
 
-    <section id="result" class="result hidden">
-      <div class="location-header">
-        <div>
-          <h2 id="location-name"></h2>
-          <p id="location-meta" class="location-meta"></p>
-        </div>
-        <span id="source-badge" class="badge"></span>
-      </div>
-      <div id="reliability" class="reliability hidden"></div>
-      <div id="days"></div>
-    </section>
+    <div id="station-grid"></div>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/stations.js"></script>
 </body>
 </html>
