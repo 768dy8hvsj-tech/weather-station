@@ -142,6 +142,7 @@ function renderResult(data) {
           <th>Time</th>
           <th>Consensus</th>
           <th>Wind</th>
+          <th>Precip</th>
           <th>yr.no</th>
           <th>vedur.is</th>
           <th>Open-Meteo</th>
@@ -176,6 +177,7 @@ function renderHourRow(h) {
   const yrno = h.sources.yrno;
   const vedur = h.sources.vedur;
   const openmeteo = h.sources.openmeteo;
+  const precip = fmtPrecip(h.consensus.precip);
 
   tr.innerHTML = `
     <td>${hh}:00</td>
@@ -184,6 +186,7 @@ function renderHourRow(h) {
       ${h.consensus.source_count > 1 ? `<span class="spread-dot ${spreadClass}" title="${h.consensus.temp_spread}°C spread across ${h.consensus.source_count} sources"></span>` : ""}
     </td>
     <td>${fmtWind(h.consensus.wind_ms)}</td>
+    <td class="${precip.cls}">${precip.text}</td>
     <td class="source-cell">${
       yrno
         ? `<span class="val">${fmtTemp(yrno.temp_c)}</span> · ${fmtWind(yrno.wind_ms)}${
@@ -199,15 +202,25 @@ function renderHourRow(h) {
     <td class="source-cell openmeteo-cell">${
       openmeteo
         ? Object.entries(openmeteo)
-            .map(
-              ([key, v]) =>
-                `<div>${OPENMETEO_LABELS[key] || key} <span class="val">${fmtTemp(v.temp_c)}</span></div>`
-            )
+            .map(([key, v]) => {
+              const extra = v.snow_cm > 0 ? ` · ${v.snow_cm}cm snow` : v.precip_mm > 0 ? ` · ${v.precip_mm}mm` : "";
+              return `<div>${OPENMETEO_LABELS[key] || key} <span class="val">${fmtTemp(v.temp_c)}</span>${extra}</div>`;
+            })
             .join("")
         : `<span class="no-source">—</span>`
     }</td>
   `;
   return tr;
+}
+
+function fmtPrecip(precip) {
+  if (!precip || precip.type === "none") return { text: "—", cls: "precip-none" };
+  if (precip.type === "snow") {
+    const amount =
+      precip.snow_cm !== null && precip.snow_cm !== undefined ? `${precip.snow_cm}cm` : `${precip.mm}mm`;
+    return { text: `${amount} snow`, cls: "precip-snow" };
+  }
+  return { text: `${precip.mm}mm rain`, cls: "precip-rain" };
 }
 
 function fmtTemp(t) {

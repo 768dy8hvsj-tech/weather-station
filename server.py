@@ -136,13 +136,18 @@ OPEN_METEO_MODELS = [("ecmwf_ifs025", "ecmwf"), ("gfs_seamless", "gfs"), ("icon_
 
 
 def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
-    """Returns {model_key: [{time, temp_c, wind_ms, precip_mm}, ...]} for each model in
-    OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested."""
+    """Returns {model_key: [{time, temp_c, wind_ms, precip_mm, snow_cm}, ...]} for each model
+    in OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested.
+
+    "precipitation" is liquid-equivalent (mm, rain+snow combined); "snowfall" is snow
+    accumulation specifically (cm) — together they let us tell rain from snow, which
+    vedur.is's forecast API doesn't expose as a number at all (only a text description).
+    """
     url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(
         {
             "latitude": f"{lat:.4f}",
             "longitude": f"{lon:.4f}",
-            "hourly": "temperature_2m,wind_speed_10m,precipitation",
+            "hourly": "temperature_2m,wind_speed_10m,precipitation,snowfall",
             "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
             "timezone": "UTC",
             "forecast_days": 4,
@@ -157,6 +162,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
         temps = hourly.get(f"temperature_2m_{model_id}")
         winds = hourly.get(f"wind_speed_10m_{model_id}")
         precs = hourly.get(f"precipitation_{model_id}")
+        snows = hourly.get(f"snowfall_{model_id}")
         if temps is None:
             continue
         points = []
@@ -168,6 +174,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
                     "temp_c": temps[i] if i < len(temps) else None,
                     "wind_ms": round(wind_kmh / 3.6, 1) if wind_kmh is not None else None,
                     "precip_mm": precs[i] if precs and i < len(precs) else None,
+                    "snow_cm": snows[i] if snows and i < len(snows) else None,
                 }
             )
         out[key] = points
@@ -184,6 +191,29 @@ def nearest(points: list[dict], target: datetime, max_delta_minutes: int = 40) -
     if best is not None and best_delta <= max_delta_minutes * 60:
         return best
     return None
+
+
+SNOW_HINTS = ("snow", "sleet")
+
+
+def resolve_precip(yrno_symbol, vedur_condition, precip_mm_values, snow_cm_values):
+    """vedur.is only gives a text condition, no numeric precip — so "type" leans on
+    Open-Meteo's snowfall (when available) and falls back to symbol/condition text
+    hints. This is a simple heuristic, not a real precip-type model."""
+    mm = round(sum(precip_mm_values) / len(precip_mm_values), 1) if precip_mm_values else None
+    snow_cm = round(sum(snow_cm_values) / len(snow_cm_values), 1) if snow_cm_values else None
+
+    text_says_snow = any(
+        s and any(h in s.lower() for h in SNOW_HINTS) for s in [yrno_symbol, vedur_condition]
+    )
+    if (snow_cm and snow_cm > 0.05) or (snow_cm is None and text_says_snow):
+        precip_type = "snow"
+    elif mm and mm > 0.05:
+        precip_type = "rain"
+    else:
+        precip_type = "none"
+
+    return {"mm": mm, "snow_cm": snow_cm, "type": precip_type, "source_count": len(precip_mm_values)}
 
 
 def build_consensus(
@@ -208,6 +238,11 @@ def build_consensus(
         temps = [v for v in temps if v is not None]
         winds = [v for v in winds if v is not None]
 
+        precip_mm_values = [yp.get("precip_mm")] + [p.get("precip_mm") for p in om.values()]
+        precip_mm_values = [v for v in precip_mm_values if v is not None]
+        snow_cm_values = [p.get("snow_cm") for p in om.values() if p.get("snow_cm") is not None]
+        precip = resolve_precip(yp.get("symbol"), vp.get("condition") if vp else None, precip_mm_values, snow_cm_values)
+
         hours.append(
             {
                 "time": yp["time"],
@@ -230,7 +265,12 @@ def build_consensus(
                     ),
                     "openmeteo": (
                         {
-                            key: {"temp_c": p.get("temp_c"), "wind_ms": p.get("wind_ms")}
+                            key: {
+                                "temp_c": p.get("temp_c"),
+                                "wind_ms": p.get("wind_ms"),
+                                "precip_mm": p.get("precip_mm"),
+                                "snow_cm": p.get("snow_cm"),
+                            }
                             for key, p in om.items()
                         }
                         if om
@@ -242,6 +282,7 @@ def build_consensus(
                     "temp_spread": round(max(temps) - min(temps), 1) if len(temps) > 1 else 0,
                     "wind_ms": round(sum(winds) / len(winds), 1) if winds else None,
                     "source_count": len(temps),
+                    "precip": precip,
                 },
             }
         )

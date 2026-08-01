@@ -8,6 +8,8 @@
   --good: #16a34a;
   --warn: #d97706;
   --bad: #dc2626;
+  --rain: #2563eb;
+  --snow: #0ea5e9;
   color-scheme: light dark;
 }
 
@@ -229,4 +231,20 @@ table.hours tr:last-child td { border-bottom: none; }
 
 .openmeteo-cell div {
   white-space: nowrap;
+}
+
+.precip-rain {
+  color: var(--rain);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.precip-snow {
+  color: var(--snow);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.precip-none {
+  color: var(--text-muted);
 }

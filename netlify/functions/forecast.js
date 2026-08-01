@@ -131,14 +131,18 @@ const OPEN_METEO_MODELS = [
 ];
 
 /**
- * Returns {model_key: [{time, temp_c, wind_ms, precip_mm}, ...]} for each model in
- * OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested.
+ * Returns {model_key: [{time, temp_c, wind_ms, precip_mm, snow_cm}, ...]} for each model
+ * in OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested.
+ *
+ * "precipitation" is liquid-equivalent (mm, rain+snow combined); "snowfall" is snow
+ * accumulation specifically (cm) — together they let us tell rain from snow, which
+ * vedur.is's forecast API doesn't expose as a number at all (only a text description).
  */
 async function fetchOpenMeteo(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
-    hourly: "temperature_2m,wind_speed_10m,precipitation",
+    hourly: "temperature_2m,wind_speed_10m,precipitation,snowfall",
     models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
     timezone: "UTC",
     forecast_days: "4",
@@ -154,6 +158,7 @@ async function fetchOpenMeteo(lat, lon) {
     const temps = hourly[`temperature_2m_${modelId}`];
     const winds = hourly[`wind_speed_10m_${modelId}`];
     const precs = hourly[`precipitation_${modelId}`];
+    const snows = hourly[`snowfall_${modelId}`];
     if (!temps) continue;
     out[key] = times.map((t, i) => {
       const windKmh = winds ? winds[i] : null;
@@ -162,6 +167,7 @@ async function fetchOpenMeteo(lat, lon) {
         temp_c: temps[i] ?? null,
         wind_ms: windKmh !== null && windKmh !== undefined ? round1(windKmh / 3.6) : null,
         precip_mm: precs ? precs[i] ?? null : null,
+        snow_cm: snows ? snows[i] ?? null : null,
       };
     });
   }
@@ -184,6 +190,33 @@ function nearest(points, targetMs, maxDeltaMinutes = 40) {
     }
   }
   return bestDelta <= maxDeltaMinutes * 60 * 1000 ? best : null;
+}
+
+const SNOW_HINTS = ["snow", "sleet"];
+
+/**
+ * vedur.is only gives a text condition, no numeric precip — so "type" leans on
+ * Open-Meteo's snowfall (when available) and falls back to symbol/condition text
+ * hints. This is a simple heuristic, not a real precip-type model.
+ */
+function resolvePrecip(yrnoSymbol, vedurCondition, precipMmValues, snowCmValues) {
+  const mm = precipMmValues.length ? round1(avg(precipMmValues)) : null;
+  const snowCm = snowCmValues.length ? round1(avg(snowCmValues)) : null;
+
+  const textSaysSnow = [yrnoSymbol, vedurCondition].some(
+    (s) => s && SNOW_HINTS.some((h) => s.toLowerCase().includes(h))
+  );
+
+  let type;
+  if ((snowCm !== null && snowCm > 0.05) || (snowCm === null && textSaysSnow)) {
+    type = "snow";
+  } else if (mm !== null && mm > 0.05) {
+    type = "rain";
+  } else {
+    type = "none";
+  }
+
+  return { mm, snow_cm: snowCm, type, source_count: precipMmValues.length };
 }
 
 function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
@@ -210,6 +243,11 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
     const winds = [yp.wind_ms, vp?.wind_ms, ...omValues.map((p) => p.wind_ms)].filter(
       (v) => v !== null && v !== undefined
     );
+    const precipMmValues = [yp.precip_mm, ...omValues.map((p) => p.precip_mm)].filter(
+      (v) => v !== null && v !== undefined
+    );
+    const snowCmValues = omValues.map((p) => p.snow_cm).filter((v) => v !== null && v !== undefined);
+    const precip = resolvePrecip(yp.symbol, vp?.condition, precipMmValues, snowCmValues);
 
     hours.push({
       time: yp.time,
@@ -220,7 +258,10 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
           : null,
         openmeteo: omValues.length
           ? Object.fromEntries(
-              Object.entries(om).map(([key, p]) => [key, { temp_c: p.temp_c, wind_ms: p.wind_ms }])
+              Object.entries(om).map(([key, p]) => [
+                key,
+                { temp_c: p.temp_c, wind_ms: p.wind_ms, precip_mm: p.precip_mm, snow_cm: p.snow_cm },
+              ])
             )
           : null,
       },
@@ -229,6 +270,7 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
         temp_spread: temps.length > 1 ? round1(Math.max(...temps) - Math.min(...temps)) : 0,
         wind_ms: winds.length ? round1(avg(winds)) : null,
         source_count: temps.length,
+        precip,
       },
     });
   }
