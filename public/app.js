@@ -153,6 +153,7 @@ function renderResult(data) {
           <th>Consensus</th>
           <th>Wind</th>
           <th>Precip</th>
+          <th>Golf</th>
           <th>yr.no</th>
           <th>vedur.is</th>
           <th>Open-Meteo</th>
@@ -219,6 +220,9 @@ function renderHourRow(h) {
   const sky = skyCategory({ cloudCoverPct: h.consensus.cloud_cover_pct, precipType: h.consensus.precip.type });
   const wind = windSeverity(h.consensus.wind_ms);
   const precipIcon = precipIconCategory(h.consensus.precip);
+  const dirDeg = h.consensus.wind_dir_deg;
+  const dirCompass = h.consensus.wind_dir_compass;
+  const golf = golfScore(h.consensus);
 
   tr.innerHTML = `
     <td>${hh}:00</td>
@@ -230,12 +234,24 @@ function renderHourRow(h) {
       </div>
     </td>
     <td>
-      ${fmtWind(h.consensus.wind_ms)}
+      <div class="wind-cell">
+        ${
+          dirDeg !== null && dirDeg !== undefined
+            ? `<span class="wind-arrow" style="transform:rotate(${(dirDeg + 180) % 360}deg)" title="Wind from ${dirCompass} (${dirDeg}°)">${WIND_ARROW}</span>`
+            : ""
+        }
+        <span>${fmtWind(h.consensus.wind_ms)}${dirCompass ? ` ${dirCompass}` : ""}</span>
+      </div>
       ${wind ? `<div class="wind-bar-track" title="${wind.tierLabel} wind"><div class="wind-bar-fill wind-${wind.tier}" style="width:${wind.pct}%"></div></div>` : ""}
     </td>
     <td class="${precip.cls}">
       ${precipIcon ? `<span class="precip-icon icon-${precipIcon}">${WEATHER_ICONS[precipIcon]}</span>` : ""}${precip.text}
     </td>
+    <td>${
+      golf
+        ? `<span class="golf-badge grade-${golf.tier}" title="${golf.notes.length ? golf.notes.join(", ") : "ideal conditions"}">${golf.label}</span>`
+        : `<span class="no-source">—</span>`
+    }</td>
     <td class="source-cell">${
       yrno
         ? `<span class="val">${fmtTemp(yrno.temp_c)}</span> · ${fmtWind(yrno.wind_ms)}${
@@ -279,6 +295,89 @@ function precipIconCategory(precip) {
   if (!precip || precip.type === "none") return null;
   if (precip.type === "snow") return "snow";
   return precip.mm !== null && precip.mm !== undefined && precip.mm < 0.5 ? "drizzle" : "rain";
+}
+
+/**
+ * Simple, transparent points-off-100 heuristic for "is this good golf weather" —
+ * not a real model, just a reasonable, explainable scoring of precip/wind/temp
+ * against comfortable playing conditions. Purely a function of consensus data.
+ */
+function golfScore(consensus) {
+  const temp = consensus.temp_c;
+  const wind = consensus.wind_ms;
+  const precip = consensus.precip || {};
+  if (temp === null || temp === undefined || wind === null || wind === undefined) return null;
+
+  let score = 100;
+  const notes = [];
+
+  if (precip.type === "rain" || precip.type === "snow") {
+    const mm = precip.mm || 0;
+    if (mm < 1) {
+      score -= 15;
+      notes.push("light precip");
+    } else if (mm < 3) {
+      score -= 30;
+      notes.push("moderate precip");
+    } else {
+      score -= 50;
+      notes.push("heavy precip");
+    }
+  }
+
+  if (wind <= 3) {
+    // calm, no deduction
+  } else if (wind <= 7) {
+    score -= 5;
+    notes.push("light wind");
+  } else if (wind <= 10) {
+    score -= 15;
+    notes.push("moderate wind");
+  } else if (wind <= 14) {
+    score -= 30;
+    notes.push("strong wind");
+  } else if (wind <= 20) {
+    score -= 50;
+    notes.push("very strong wind");
+  } else {
+    score -= 70;
+    notes.push("extreme wind");
+  }
+
+  if (temp >= 12 && temp <= 22) {
+    // ideal range, no deduction
+  } else if ((temp >= 8 && temp < 12) || (temp > 22 && temp <= 26)) {
+    score -= 10;
+    notes.push("cool/warm");
+  } else if ((temp >= 4 && temp < 8) || (temp > 26 && temp <= 30)) {
+    score -= 20;
+    notes.push("cold/hot");
+  } else {
+    score -= 35;
+    notes.push("extreme temp");
+  }
+
+  score = Math.max(0, Math.min(100, score));
+
+  let label, tier;
+  if (score >= 85) {
+    label = "Excellent";
+    tier = "good";
+  } else if (score >= 65) {
+    label = "Good";
+    tier = "good";
+  } else if (score >= 45) {
+    label = "Fair";
+    tier = "warn";
+  } else if (score >= 25) {
+    label = "Poor";
+    tier = "bad";
+  } else {
+    label = "Unplayable";
+    tier = "bad";
+  }
+
+  return { score, label, tier, notes };
 }
 
 function fmtPrecip(precip) {

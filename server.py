@@ -10,6 +10,7 @@ Combines several independently-run forecast sources for a given place:
 Serves the static frontend from ./public and a small JSON API under /api/*.
 """
 import json
+import math
 import ssl
 import urllib.parse
 import urllib.request
@@ -19,6 +20,30 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+COMPASS_POINTS = [
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+]
+COMPASS_TO_DEGREES = {name: i * 22.5 for i, name in enumerate(COMPASS_POINTS)}
+
+
+def degrees_to_compass(deg: float | None) -> str | None:
+    if deg is None:
+        return None
+    return COMPASS_POINTS[round(deg / 22.5) % 16]
+
+
+def circular_mean_degrees(degrees_list: list[float]) -> float | None:
+    """Plain averaging breaks across the 0/360 wrap (350° and 10° should average to
+    0°, not 180°), so this averages the unit vectors instead and converts back."""
+    if not degrees_list:
+        return None
+    x = sum(math.cos(math.radians(d)) for d in degrees_list)
+    y = sum(math.sin(math.radians(d)) for d in degrees_list)
+    if x == 0 and y == 0:
+        return None
+    return math.degrees(math.atan2(y, x)) % 360
 
 ROOT = Path(__file__).parent
 PUBLIC_DIR = ROOT / "public"
@@ -81,7 +106,7 @@ def geocode(query: str, iceland_only: bool = True) -> dict | None:
 
 
 def fetch_yrno(lat: float, lon: float) -> list[dict]:
-    """Returns a list of {time, temp_c, wind_ms, precip_mm, symbol} at hourly resolution."""
+    """Returns a list of {time, temp_c, wind_ms, wind_dir_deg, precip_mm, symbol} at hourly resolution."""
     url = (
         "https://api.met.no/weatherapi/locationforecast/2.0/compact?"
         + urllib.parse.urlencode({"lat": f"{lat:.4f}", "lon": f"{lon:.4f}"})
@@ -97,6 +122,7 @@ def fetch_yrno(lat: float, lon: float) -> list[dict]:
                 "time": time,
                 "temp_c": instant.get("air_temperature"),
                 "wind_ms": instant.get("wind_speed"),
+                "wind_dir_deg": instant.get("wind_from_direction"),
                 "precip_mm": next1h.get("details", {}).get("precipitation_amount"),
                 "symbol": next1h.get("summary", {}).get("symbol_code"),
             }
@@ -190,7 +216,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
         {
             "latitude": f"{lat:.4f}",
             "longitude": f"{lon:.4f}",
-            "hourly": "temperature_2m,wind_speed_10m,precipitation,snowfall,cloud_cover",
+            "hourly": "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,snowfall,cloud_cover",
             "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
             "timezone": "UTC",
             "forecast_days": 4,
@@ -204,6 +230,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
     for model_id, key in OPEN_METEO_MODELS:
         temps = hourly.get(f"temperature_2m_{model_id}")
         winds = hourly.get(f"wind_speed_10m_{model_id}")
+        wind_dirs = hourly.get(f"wind_direction_10m_{model_id}")
         precs = hourly.get(f"precipitation_{model_id}")
         snows = hourly.get(f"snowfall_{model_id}")
         clouds = hourly.get(f"cloud_cover_{model_id}")
@@ -217,6 +244,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
                     "time": f"{t}:00Z",
                     "temp_c": temps[i] if i < len(temps) else None,
                     "wind_ms": round(wind_kmh / 3.6, 1) if wind_kmh is not None else None,
+                    "wind_dir_deg": wind_dirs[i] if wind_dirs and i < len(wind_dirs) else None,
                     "precip_mm": precs[i] if precs and i < len(precs) else None,
                     "snow_cm": snows[i] if snows and i < len(snows) else None,
                     "cloud_cover_pct": clouds[i] if clouds and i < len(clouds) else None,
@@ -363,6 +391,13 @@ def build_consensus(
         cloud_values = [p.get("cloud_cover_pct") for p in om.values() if p.get("cloud_cover_pct") is not None]
         cloud_cover_pct = round(sum(cloud_values) / len(cloud_values)) if cloud_values else None
 
+        wind_dir_values = [yp.get("wind_dir_deg")]
+        if vp:
+            wind_dir_values.append(COMPASS_TO_DEGREES.get(vp.get("direction")))
+        wind_dir_values += [p.get("wind_dir_deg") for p in om.values()]
+        wind_dir_values = [v for v in wind_dir_values if v is not None]
+        wind_dir_deg = circular_mean_degrees(wind_dir_values)
+
         hours.append(
             {
                 "time": yp["time"],
@@ -370,6 +405,7 @@ def build_consensus(
                     "yrno": {
                         "temp_c": yp.get("temp_c"),
                         "wind_ms": yp.get("wind_ms"),
+                        "wind_dir_deg": yp.get("wind_dir_deg"),
                         "precip_mm": yp.get("precip_mm"),
                         "symbol": yp.get("symbol"),
                     },
@@ -388,6 +424,7 @@ def build_consensus(
                             key: {
                                 "temp_c": p.get("temp_c"),
                                 "wind_ms": p.get("wind_ms"),
+                                "wind_dir_deg": p.get("wind_dir_deg"),
                                 "precip_mm": p.get("precip_mm"),
                                 "snow_cm": p.get("snow_cm"),
                             }
@@ -401,6 +438,8 @@ def build_consensus(
                     "temp_c": round(sum(temps) / len(temps), 1) if temps else None,
                     "temp_spread": round(max(temps) - min(temps), 1) if len(temps) > 1 else 0,
                     "wind_ms": round(sum(winds) / len(winds), 1) if winds else None,
+                    "wind_dir_deg": round(wind_dir_deg) if wind_dir_deg is not None else None,
+                    "wind_dir_compass": degrees_to_compass(wind_dir_deg),
                     "source_count": len(temps),
                     "precip": precip,
                     "cloud_cover_pct": cloud_cover_pct,

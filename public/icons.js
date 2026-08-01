@@ -11,6 +11,9 @@ function svg(inner) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
 
+// Points up by default; rotate via CSS transform to the direction the wind is blowing toward.
+const WIND_ARROW = svg(`<path d="M12 20V5M12 5l-5 5M12 5l5 5"/>`);
+
 const WEATHER_ICONS = {
   clear: svg(`<circle cx="12" cy="12" r="4.3"/>${SUN_RAYS}`),
   "partly-cloudy": svg(

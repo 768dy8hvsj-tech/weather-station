@@ -1,5 +1,28 @@
 const USER_AGENT = "weather-consensus-app/1.0 (personal project; contact hakond@gmail.com)";
 
+const COMPASS_POINTS = [
+  "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+  "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+];
+const COMPASS_TO_DEGREES = Object.fromEntries(COMPASS_POINTS.map((name, i) => [name, i * 22.5]));
+
+function degreesToCompass(deg) {
+  if (deg === null || deg === undefined) return null;
+  return COMPASS_POINTS[Math.round(deg / 22.5) % 16];
+}
+
+/**
+ * Plain averaging breaks across the 0/360 wrap (350° and 10° should average to 0°,
+ * not 180°), so this averages the unit vectors instead and converts back.
+ */
+function circularMeanDegrees(degreesList) {
+  if (!degreesList.length) return null;
+  const x = degreesList.reduce((sum, d) => sum + Math.cos((d * Math.PI) / 180), 0);
+  const y = degreesList.reduce((sum, d) => sum + Math.sin((d * Math.PI) / 180), 0);
+  if (x === 0 && y === 0) return null;
+  return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
+}
+
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const name = (params.name || "").trim();
@@ -97,6 +120,7 @@ async function fetchYrno(lat, lon) {
       time: entry.time,
       temp_c: instant.air_temperature ?? null,
       wind_ms: instant.wind_speed ?? null,
+      wind_dir_deg: instant.wind_from_direction ?? null,
       precip_mm: next1h.details?.precipitation_amount ?? null,
       symbol: next1h.summary?.symbol_code ?? null,
     };
@@ -150,7 +174,7 @@ async function fetchOpenMeteo(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
-    hourly: "temperature_2m,wind_speed_10m,precipitation,snowfall,cloud_cover",
+    hourly: "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,snowfall,cloud_cover",
     models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
     timezone: "UTC",
     forecast_days: "4",
@@ -165,6 +189,7 @@ async function fetchOpenMeteo(lat, lon) {
   for (const [modelId, key] of OPEN_METEO_MODELS) {
     const temps = hourly[`temperature_2m_${modelId}`];
     const winds = hourly[`wind_speed_10m_${modelId}`];
+    const windDirs = hourly[`wind_direction_10m_${modelId}`];
     const precs = hourly[`precipitation_${modelId}`];
     const snows = hourly[`snowfall_${modelId}`];
     const clouds = hourly[`cloud_cover_${modelId}`];
@@ -175,6 +200,7 @@ async function fetchOpenMeteo(lat, lon) {
         time: `${t}:00Z`,
         temp_c: temps[i] ?? null,
         wind_ms: windKmh !== null && windKmh !== undefined ? round1(windKmh / 3.6) : null,
+        wind_dir_deg: windDirs ? windDirs[i] ?? null : null,
         precip_mm: precs ? precs[i] ?? null : null,
         snow_cm: snows ? snows[i] ?? null : null,
         cloud_cover_pct: clouds ? clouds[i] ?? null : null,
@@ -344,10 +370,15 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
     const cloudValues = omValues.map((p) => p.cloud_cover_pct).filter((v) => v !== null && v !== undefined);
     const cloudCoverPct = cloudValues.length ? Math.round(avg(cloudValues)) : null;
 
+    const windDirValues = [yp.wind_dir_deg, vp ? COMPASS_TO_DEGREES[vp.direction] : undefined, ...omValues.map((p) => p.wind_dir_deg)].filter(
+      (v) => v !== null && v !== undefined
+    );
+    const windDirDeg = circularMeanDegrees(windDirValues);
+
     hours.push({
       time: yp.time,
       sources: {
-        yrno: { temp_c: yp.temp_c, wind_ms: yp.wind_ms, precip_mm: yp.precip_mm, symbol: yp.symbol },
+        yrno: { temp_c: yp.temp_c, wind_ms: yp.wind_ms, wind_dir_deg: yp.wind_dir_deg, precip_mm: yp.precip_mm, symbol: yp.symbol },
         vedur: vp
           ? { temp_c: vp.temp_c, wind_ms: vp.wind_ms, condition: vp.condition, direction: vp.direction }
           : null,
@@ -355,7 +386,7 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
           ? Object.fromEntries(
               Object.entries(om).map(([key, p]) => [
                 key,
-                { temp_c: p.temp_c, wind_ms: p.wind_ms, precip_mm: p.precip_mm, snow_cm: p.snow_cm },
+                { temp_c: p.temp_c, wind_ms: p.wind_ms, wind_dir_deg: p.wind_dir_deg, precip_mm: p.precip_mm, snow_cm: p.snow_cm },
               ])
             )
           : null,
@@ -364,6 +395,8 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
         temp_c: temps.length ? round1(avg(temps)) : null,
         temp_spread: temps.length > 1 ? round1(Math.max(...temps) - Math.min(...temps)) : 0,
         wind_ms: winds.length ? round1(avg(winds)) : null,
+        wind_dir_deg: windDirDeg !== null ? Math.round(windDirDeg) : null,
+        wind_dir_compass: degreesToCompass(windDirDeg),
         source_count: temps.length,
         precip,
         cloud_cover_pct: cloudCoverPct,
