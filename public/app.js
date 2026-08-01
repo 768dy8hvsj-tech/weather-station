@@ -252,7 +252,7 @@ function renderHourRow(h) {
     </td>
     <td>${
       golf
-        ? `<span class="golf-badge grade-${golf.tier}" title="${golf.notes.length ? golf.notes.join(", ") : "ideal conditions"}">${golf.label}</span>`
+        ? `<span class="golf-badge grade-${golf.tier}" title="Score ${golf.score}/100 — ${golf.notes.length ? golf.notes.join(", ") : "ideal conditions"}">${golf.label} <span class="golf-score-num">${golf.score}</span></span>`
         : `<span class="no-source">—</span>`
     }</td>
     <td class="source-cell">${
