@@ -181,6 +181,78 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
     return out
 
 
+RELIABILITY_WINDOW_HOURS = 24
+
+
+def fetch_reliability(lat: float, lon: float) -> dict | None:
+    """24h backtest of each Open-Meteo model's own short-range skill.
+
+    Open-Meteo's Previous Runs API can return what a model predicted N days before
+    a given hour (temperature_2m_previous_day1 = predicted 24h ahead of that hour).
+    We don't have an independent observation history to compare against (vedur.is's
+    obs endpoint only exposes the latest reading, not a time series), so — per
+    Open-Meteo's own documented method — we compare each 24h-ahead prediction
+    against that same model's current/latest run for the same past hour
+    (temperature_2m), which reflects its most up-to-date analysis.
+    """
+    url = "https://previous-runs-api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(
+        {
+            "latitude": f"{lat:.4f}",
+            "longitude": f"{lon:.4f}",
+            "hourly": "temperature_2m,temperature_2m_previous_day1,wind_speed_10m,wind_speed_10m_previous_day1",
+            "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
+            "past_days": 2,
+            "forecast_days": 1,
+            "timezone": "UTC",
+        }
+    )
+    raw = json.loads(http_get(url))
+    hourly = raw.get("hourly", {})
+    times = hourly.get("time", [])
+
+    now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0, tzinfo=None)
+    window_start = now - timedelta(hours=RELIABILITY_WINDOW_HOURS)
+
+    models = {}
+    temp_maes = []
+    for model_id, key in OPEN_METEO_MODELS:
+        actual_temp = hourly.get(f"temperature_2m_{model_id}")
+        pred_temp = hourly.get(f"temperature_2m_previous_day1_{model_id}")
+        actual_wind = hourly.get(f"wind_speed_10m_{model_id}")
+        pred_wind = hourly.get(f"wind_speed_10m_previous_day1_{model_id}")
+        if not actual_temp or not pred_temp:
+            continue
+
+        temp_errors, wind_errors = [], []
+        for i, t in enumerate(times):
+            ts = datetime.fromisoformat(t).replace(tzinfo=None)
+            if not (window_start <= ts <= now):
+                continue
+            if actual_temp[i] is not None and pred_temp[i] is not None:
+                temp_errors.append(abs(actual_temp[i] - pred_temp[i]))
+            if actual_wind and pred_wind and actual_wind[i] is not None and pred_wind[i] is not None:
+                wind_errors.append(abs(actual_wind[i] - pred_wind[i]) / 3.6)
+
+        if not temp_errors:
+            continue
+        mae_temp = round(sum(temp_errors) / len(temp_errors), 2)
+        models[key] = {
+            "mae_temp_c": mae_temp,
+            "mae_wind_ms": round(sum(wind_errors) / len(wind_errors), 2) if wind_errors else None,
+            "sample_hours": len(temp_errors),
+        }
+        temp_maes.append(mae_temp)
+
+    if not models:
+        return None
+
+    return {
+        "window_hours": RELIABILITY_WINDOW_HOURS,
+        "avg_mae_temp_c": round(sum(temp_maes) / len(temp_maes), 2),
+        "models": models,
+    }
+
+
 def nearest(points: list[dict], target: datetime, max_delta_minutes: int = 40) -> dict | None:
     best, best_delta = None, None
     for p in points:
@@ -344,6 +416,11 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 openmeteo_points = {}
 
+            try:
+                reliability = fetch_reliability(geo["lat"], geo["lon"])
+            except Exception:
+                reliability = None
+
             hours = build_consensus(yrno_points, vedur_points, openmeteo_points)
 
             source_labels = ["yr.no"]
@@ -364,6 +441,7 @@ class Handler(BaseHTTPRequestHandler):
                         "source_labels": source_labels,
                     },
                     "hours": hours,
+                    "reliability": reliability,
                 }
             )
             return

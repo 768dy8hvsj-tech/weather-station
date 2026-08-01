@@ -5,6 +5,7 @@ const resultEl = document.getElementById("result");
 const locationNameEl = document.getElementById("location-name");
 const locationMetaEl = document.getElementById("location-meta");
 const sourceBadgeEl = document.getElementById("source-badge");
+const reliabilityEl = document.getElementById("reliability");
 const daysEl = document.getElementById("days");
 
 let debounceTimer = null;
@@ -110,12 +111,14 @@ async function loadForecast(name, stationId) {
 }
 
 function renderResult(data) {
-  const { location, hours } = data;
+  const { location, hours, reliability } = data;
   locationNameEl.textContent = location.name;
   locationMetaEl.textContent = location.resolved_name;
   const labels = location.source_labels || ["yr.no"];
   const noun = location.source_count === 1 ? "source" : "sources";
   sourceBadgeEl.textContent = `${location.source_count} ${noun}: ${labels.join(" + ")}`;
+
+  renderReliability(reliability);
 
   const byDay = new Map();
   for (const h of hours) {
@@ -165,6 +168,34 @@ function renderResult(data) {
 }
 
 const OPENMETEO_LABELS = { ecmwf: "ECMWF", gfs: "GFS", icon: "ICON" };
+
+function renderReliability(reliability) {
+  if (!reliability) {
+    reliabilityEl.classList.add("hidden");
+    reliabilityEl.innerHTML = "";
+    return;
+  }
+
+  const { avg_mae_temp_c, models, window_hours } = reliability;
+  const grade = avg_mae_temp_c <= 0.75 ? "good" : avg_mae_temp_c <= 1.5 ? "warn" : "bad";
+  const gradeLabel = grade === "good" ? "Good" : grade === "warn" ? "Fair" : "Poor";
+
+  const modelBits = Object.entries(models)
+    .map(([key, m]) => `${OPENMETEO_LABELS[key] || key} ±${m.mae_temp_c}°`)
+    .join(" · ");
+
+  reliabilityEl.innerHTML = `
+    <div class="reliability-header">
+      <span class="reliability-title">Forecast reliability (last ${window_hours}h)</span>
+      <span class="reliability-grade grade-${grade}">${gradeLabel}</span>
+    </div>
+    <p class="reliability-summary">
+      Open-Meteo's models have averaged <strong>±${avg_mae_temp_c}°C</strong> off their own
+      24h-ahead predictions over the last ${window_hours}h: ${modelBits}.
+    </p>
+  `;
+  reliabilityEl.classList.remove("hidden");
+}
 
 function renderHourRow(h) {
   const tr = document.createElement("tr");

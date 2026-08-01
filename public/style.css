@@ -150,6 +150,61 @@ body {
   white-space: normal;
 }
 
+.reliability {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.reliability-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reliability-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.reliability-grade {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.grade-good {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 15%, transparent);
+}
+
+.grade-warn {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+}
+
+.grade-bad {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 15%, transparent);
+}
+
+.reliability-summary {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.reliability-summary strong {
+  color: var(--text);
+}
+
 .day-card {
   background: var(--surface);
   border: 1px solid var(--border);
