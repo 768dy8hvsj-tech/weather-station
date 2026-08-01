@@ -216,15 +216,26 @@ function renderHourRow(h) {
   const vedur = h.sources.vedur;
   const openmeteo = h.sources.openmeteo;
   const precip = fmtPrecip(h.consensus.precip);
+  const sky = skyCategory({ cloudCoverPct: h.consensus.cloud_cover_pct, precipType: h.consensus.precip.type });
+  const wind = windSeverity(h.consensus.wind_ms);
+  const precipIcon = precipIconCategory(h.consensus.precip);
 
   tr.innerHTML = `
     <td>${hh}:00</td>
     <td>
-      <span class="consensus-temp">${fmtTemp(h.consensus.temp_c)}</span>
-      ${h.consensus.source_count > 1 ? `<span class="spread-dot ${spreadClass}" title="${h.consensus.temp_spread}°C spread across ${h.consensus.source_count} sources"></span>` : ""}
+      <div class="consensus-cell">
+        <div class="consensus-icon icon-${sky}" title="${sky.replace("-", " ")}">${WEATHER_ICONS[sky] || WEATHER_ICONS.unknown}</div>
+        <span class="consensus-temp">${fmtTemp(h.consensus.temp_c)}</span>
+        ${h.consensus.source_count > 1 ? `<span class="spread-dot ${spreadClass}" title="${h.consensus.temp_spread}°C spread across ${h.consensus.source_count} sources"></span>` : ""}
+      </div>
     </td>
-    <td>${fmtWind(h.consensus.wind_ms)}</td>
-    <td class="${precip.cls}">${precip.text}</td>
+    <td>
+      ${fmtWind(h.consensus.wind_ms)}
+      ${wind ? `<div class="wind-bar-track" title="${wind.tierLabel} wind"><div class="wind-bar-fill wind-${wind.tier}" style="width:${wind.pct}%"></div></div>` : ""}
+    </td>
+    <td class="${precip.cls}">
+      ${precipIcon ? `<span class="precip-icon icon-${precipIcon}">${WEATHER_ICONS[precipIcon]}</span>` : ""}${precip.text}
+    </td>
     <td class="source-cell">${
       yrno
         ? `<span class="val">${fmtTemp(yrno.temp_c)}</span> · ${fmtWind(yrno.wind_ms)}${
@@ -249,6 +260,25 @@ function renderHourRow(h) {
     }</td>
   `;
   return tr;
+}
+
+/**
+ * Simplified 3-tier Beaufort-ish scale: <=7 m/s roughly Beaufort 0-4 (light-moderate
+ * breeze), <=14 m/s Beaufort 5-7 (fresh-strong breeze/near gale), above that gale+.
+ * Bar fill is scaled against 25 m/s as a visual "full" reference, not a hard cap.
+ */
+function windSeverity(ms) {
+  if (ms === null || ms === undefined) return null;
+  const pct = Math.max(4, Math.min(100, Math.round((ms / 25) * 100)));
+  const tier = ms <= 7 ? "good" : ms <= 14 ? "warn" : "bad";
+  const tierLabel = ms <= 7 ? "Light-moderate" : ms <= 14 ? "Fresh-strong" : "Gale+";
+  return { pct, tier, tierLabel };
+}
+
+function precipIconCategory(precip) {
+  if (!precip || precip.type === "none") return null;
+  if (precip.type === "snow") return "snow";
+  return precip.mm !== null && precip.mm !== undefined && precip.mm < 0.5 ? "drizzle" : "rain";
 }
 
 function fmtPrecip(precip) {

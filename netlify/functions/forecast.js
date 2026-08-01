@@ -150,7 +150,7 @@ async function fetchOpenMeteo(lat, lon) {
   const params = new URLSearchParams({
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
-    hourly: "temperature_2m,wind_speed_10m,precipitation,snowfall",
+    hourly: "temperature_2m,wind_speed_10m,precipitation,snowfall,cloud_cover",
     models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
     timezone: "UTC",
     forecast_days: "4",
@@ -167,6 +167,7 @@ async function fetchOpenMeteo(lat, lon) {
     const winds = hourly[`wind_speed_10m_${modelId}`];
     const precs = hourly[`precipitation_${modelId}`];
     const snows = hourly[`snowfall_${modelId}`];
+    const clouds = hourly[`cloud_cover_${modelId}`];
     if (!temps) continue;
     out[key] = times.map((t, i) => {
       const windKmh = winds ? winds[i] : null;
@@ -176,6 +177,7 @@ async function fetchOpenMeteo(lat, lon) {
         wind_ms: windKmh !== null && windKmh !== undefined ? round1(windKmh / 3.6) : null,
         precip_mm: precs ? precs[i] ?? null : null,
         snow_cm: snows ? snows[i] ?? null : null,
+        cloud_cover_pct: clouds ? clouds[i] ?? null : null,
       };
     });
   }
@@ -339,6 +341,9 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
     const snowCmValues = omValues.map((p) => p.snow_cm).filter((v) => v !== null && v !== undefined);
     const precip = resolvePrecip(yp.symbol, vp?.condition, precipMmValues, snowCmValues);
 
+    const cloudValues = omValues.map((p) => p.cloud_cover_pct).filter((v) => v !== null && v !== undefined);
+    const cloudCoverPct = cloudValues.length ? Math.round(avg(cloudValues)) : null;
+
     hours.push({
       time: yp.time,
       sources: {
@@ -361,6 +366,7 @@ function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
         wind_ms: winds.length ? round1(avg(winds)) : null,
         source_count: temps.length,
         precip,
+        cloud_cover_pct: cloudCoverPct,
       },
     });
   }

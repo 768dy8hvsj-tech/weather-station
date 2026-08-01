@@ -190,7 +190,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
         {
             "latitude": f"{lat:.4f}",
             "longitude": f"{lon:.4f}",
-            "hourly": "temperature_2m,wind_speed_10m,precipitation,snowfall",
+            "hourly": "temperature_2m,wind_speed_10m,precipitation,snowfall,cloud_cover",
             "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
             "timezone": "UTC",
             "forecast_days": 4,
@@ -206,6 +206,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
         winds = hourly.get(f"wind_speed_10m_{model_id}")
         precs = hourly.get(f"precipitation_{model_id}")
         snows = hourly.get(f"snowfall_{model_id}")
+        clouds = hourly.get(f"cloud_cover_{model_id}")
         if temps is None:
             continue
         points = []
@@ -218,6 +219,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
                     "wind_ms": round(wind_kmh / 3.6, 1) if wind_kmh is not None else None,
                     "precip_mm": precs[i] if precs and i < len(precs) else None,
                     "snow_cm": snows[i] if snows and i < len(snows) else None,
+                    "cloud_cover_pct": clouds[i] if clouds and i < len(clouds) else None,
                 }
             )
         out[key] = points
@@ -358,6 +360,9 @@ def build_consensus(
         snow_cm_values = [p.get("snow_cm") for p in om.values() if p.get("snow_cm") is not None]
         precip = resolve_precip(yp.get("symbol"), vp.get("condition") if vp else None, precip_mm_values, snow_cm_values)
 
+        cloud_values = [p.get("cloud_cover_pct") for p in om.values() if p.get("cloud_cover_pct") is not None]
+        cloud_cover_pct = round(sum(cloud_values) / len(cloud_values)) if cloud_values else None
+
         hours.append(
             {
                 "time": yp["time"],
@@ -398,6 +403,7 @@ def build_consensus(
                     "wind_ms": round(sum(winds) / len(winds), 1) if winds else None,
                     "source_count": len(temps),
                     "precip": precip,
+                    "cloud_cover_pct": cloud_cover_pct,
                 },
             }
         )
