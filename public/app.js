@@ -387,6 +387,9 @@ function golfScore(consensus, timeIso, daylight) {
     notes.push(`force ${b.force} wind (${b.name.toLowerCase()})`);
   }
 
+  // Sized so each band caps the best-case label even with perfect wind/precip:
+  // 4-8°C alone (-40) tops out at 60 (Fair, never Good); below 4°C alone (-60)
+  // tops out at 40 (Poor, never Fair/Good).
   const feelsLike = windChillC(temp, wind);
   if (feelsLike >= 12 && feelsLike <= 22) {
     // ideal range, no deduction
@@ -394,10 +397,10 @@ function golfScore(consensus, timeIso, daylight) {
     score -= 10;
     notes.push("cool/warm feels-like");
   } else if ((feelsLike >= 4 && feelsLike < 8) || (feelsLike > 26 && feelsLike <= 30)) {
-    score -= 20;
+    score -= 40;
     notes.push("cold/hot feels-like");
   } else {
-    score -= 35;
+    score -= 60;
     notes.push("extreme feels-like temp");
   }
 
