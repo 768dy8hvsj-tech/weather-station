@@ -1,0 +1,1222 @@
+[
+  {
+    "id": 31572,
+    "name": "Akrafjall",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 3471,
+    "name": "Akureyri - Krossanesbraut",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 3007,
+    "name": "Austurárdalsháls",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 6420,
+    "name": "Árnes",
+    "region": "Suðurland"
+  },
+  {
+    "id": 4614,
+    "name": "Ásbyrgi",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 2175,
+    "name": "Ásgarður",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 6237,
+    "name": "Básar á Goðalandi",
+    "region": "Suðurland"
+  },
+  {
+    "id": 34326,
+    "name": "Biskupsháls",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 2428,
+    "name": "Bíldudalur",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 2304,
+    "name": "Bjargtangar",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 4472,
+    "name": "Bjarnarey",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 3585,
+    "name": "Björg í Kinn",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 1936,
+    "name": "Bláfeldur",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1486,
+    "name": "Bláfjöll",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 31577,
+    "name": "Blikdalsá",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 3317,
+    "name": "Blönduós",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 33419,
+    "name": "Blönduós Vegagerðarstöð",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 3229,
+    "name": "Blönduvirkjun",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 2738,
+    "name": "Bolungarvík",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 35116,
+    "name": "Borgarhöfn",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 32635,
+    "name": "Botn í Súgandafirði",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 31985,
+    "name": "Brattabrekka",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 35965,
+    "name": "Breiðdalsheiði",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 5940,
+    "name": "Brú á Jökuldal",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 5825,
+    "name": "Brúaröræfi",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 3223,
+    "name": "Brúsastaðir",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 36415,
+    "name": "Bræðratunguvegur",
+    "region": "Suðurland"
+  },
+  {
+    "id": 31932,
+    "name": "Búlandshöfði",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 6430,
+    "name": "Búrfell",
+    "region": "Suðurland"
+  },
+  {
+    "id": 620,
+    "name": "Dalatangi",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 34415,
+    "name": "Dettifoss",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 571,
+    "name": "Egilsstaðaflugvöllur",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 32390,
+    "name": "Ennisháls",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 5981,
+    "name": "Eskifjörður",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 5943,
+    "name": "Eyjabakkar",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 1395,
+    "name": "Eyrarbakki",
+    "region": "Suðurland"
+  },
+  {
+    "id": 7001,
+    "name": "Fagradals-Hagafell",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 34073,
+    "name": "Fagridalur",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 5309,
+    "name": "Fagurhólsmýri",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 5982,
+    "name": "Fáskrúðsfjörður Ljósaland",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 31365,
+    "name": "Festarfjall",
+    "region": "Suðurland"
+  },
+  {
+    "id": 1868,
+    "name": "Fíflholt á Mýrum",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 34175,
+    "name": "Fjarðarheiði",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 32250,
+    "name": "Flatey á Breiðafirði",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 3779,
+    "name": "Flatey á Skjálfanda",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 2631,
+    "name": "Flateyri",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 33487,
+    "name": "Fljótsheiði",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 4867,
+    "name": "Fontur",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 31931,
+    "name": "Fróðárheiði",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 4275,
+    "name": "Gagnheiði",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 31475,
+    "name": "Garðabær - Kauptún",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1474,
+    "name": "Garðabær Urriðaholt",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1453,
+    "name": "Garðskagaviti",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 33204,
+    "name": "Gauksmýri",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 1480,
+    "name": "Geldinganes",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 32533,
+    "name": "Gemlufallsheiði",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 32372,
+    "name": "Gillastaðamelar",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 31361,
+    "name": "Gíghæð",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 31599,
+    "name": "Gjábakki",
+    "region": "Suðurland"
+  },
+  {
+    "id": 1361,
+    "name": "Grindavík",
+    "region": "Suðurland"
+  },
+  {
+    "id": 3976,
+    "name": "Grímsey",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 4323,
+    "name": "Grímsstaðir á Fjöllum",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 1938,
+    "name": "Grundarfjörður",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 34081,
+    "name": "Græfur í Fagradal",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 1919,
+    "name": "Gufuskálar",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 36519,
+    "name": "Gullfoss",
+    "region": "Suðurland"
+  },
+  {
+    "id": 31674,
+    "name": "Hafnarfjall",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 31958,
+    "name": "Hafursfell",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 5960,
+    "name": "Hallormsstaðaháls",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 4060,
+    "name": "Hallormsstaður",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 5970,
+    "name": "Hallsteinsdalsvarp",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 35769,
+    "name": "Hamarsfjörður",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 3103,
+    "name": "Haugur",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 34450,
+    "name": "Hauksstaðir",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 32322,
+    "name": "Hálfdán",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 34733,
+    "name": "Hálsar",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 33563,
+    "name": "Hámundarstaðaháls",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 6315,
+    "name": "Hella",
+    "region": "Suðurland"
+  },
+  {
+    "id": 31392,
+    "name": "Hellisheiði",
+    "region": "Suðurland"
+  },
+  {
+    "id": 1490,
+    "name": "Hellisskarð",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 33654,
+    "name": "Héðinsfjörður",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 6515,
+    "name": "Hjarðarland",
+    "region": "Suðurland"
+  },
+  {
+    "id": 32097,
+    "name": "Holtavörðuheiði",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 2862,
+    "name": "Hornbjargsviti",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 34732,
+    "name": "Hófaskarð",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 2530,
+    "name": "Hólar í Dýrafirði",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 33495,
+    "name": "Hólasandur",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 2481,
+    "name": "Hólmavík",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 1481,
+    "name": "Hólmsheiði",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 33652,
+    "name": "Hólshyrna",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 31840,
+    "name": "Hraunsmúli",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 6802,
+    "name": "Húsafell",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 3696,
+    "name": "Húsavík",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 35666,
+    "name": "Hvalnes",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 36127,
+    "name": "Hvammur",
+    "region": "Suðurland"
+  },
+  {
+    "id": 1777,
+    "name": "Hvanneyri",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 6935,
+    "name": "Hveravellir",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 5544,
+    "name": "Höfn í Hornafirði",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 31399,
+    "name": "Ingólfsfjall",
+    "region": "Suðurland"
+  },
+  {
+    "id": 5210,
+    "name": "Ingólfshöfði",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 2644,
+    "name": "Ísafjörður Tungudalur",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 34148,
+    "name": "Jökuldalur",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 6670,
+    "name": "Jökulheimar",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 33480,
+    "name": "Kaldakinn",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 5885,
+    "name": "Kambanes",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 35884,
+    "name": "Kambaskriður",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 6310,
+    "name": "Kálfhóll",
+    "region": "Suðurland"
+  },
+  {
+    "id": 5933,
+    "name": "Kárahnjúkar",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 990,
+    "name": "Keflavíkurflugvöllur",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 6272,
+    "name": "Kirkjubæjarklaustur Stjórnarsandur",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 31579,
+    "name": "Kjalarnes",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 32224,
+    "name": "Kleifaheiði",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 32355,
+    "name": "Klettsháls",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 31882,
+    "name": "Kolás",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 31942,
+    "name": "Kolgrafafjarðarbrú",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 3225,
+    "name": "Kolka",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 5975,
+    "name": "Kollaleira í Reyðarfirði",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 1479,
+    "name": "Korpa",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1472,
+    "name": "Kópavogur Fossvogsdalur",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 4406,
+    "name": "Krafla",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 35315,
+    "name": "Kvísker Vegagerðarstöð",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 2315,
+    "name": "Lambavatn",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 6472,
+    "name": "Laufbali",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 32190,
+    "name": "Laxárdalsheiði",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 293,
+    "name": "Litla-Ávík",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 36386,
+    "name": "Lómagnúpur",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 6459,
+    "name": "Lónakvísl",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 36504,
+    "name": "Lyngdalsheiði",
+    "region": "Suðurland"
+  },
+  {
+    "id": 26400,
+    "name": "Markalækur",
+    "region": "Suðurland"
+  },
+  {
+    "id": 36122,
+    "name": "Markarfljót",
+    "region": "Suðurland"
+  },
+  {
+    "id": 3797,
+    "name": "Mánárbakki",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 4652,
+    "name": "Miðfjarðarnes",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 31122,
+    "name": "Miklidalur",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 31591,
+    "name": "Mosfellsheiði",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 36156,
+    "name": "Mýrdalssandur",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 4300,
+    "name": "Mývatn",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 33394,
+    "name": "Mývatnsheiði",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 34413,
+    "name": "Mývatnsöræfi",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 34238,
+    "name": "Möðrudalsöræfi II",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 4830,
+    "name": "Möðrudalur",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 3463,
+    "name": "Möðruvellir",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 6424,
+    "name": "Mörk á Landi",
+    "region": "Suðurland"
+  },
+  {
+    "id": 3242,
+    "name": "Nautabú",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 5990,
+    "name": "Neskaupstaður",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 36382,
+    "name": "Núpahraun",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 34087,
+    "name": "Oddsskarð",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 33661,
+    "name": "Ólafsfjarðarvegur við Sauðanes",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 3658,
+    "name": "Ólafsfjörður",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 1924,
+    "name": "Ólafsvík",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 5777,
+    "name": "Papey",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 2319,
+    "name": "Patreksfjörður",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 4912,
+    "name": "Rauðinúpur",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 4828,
+    "name": "Raufarhöfn",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 33420,
+    "name": "Refasveit",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 2266,
+    "name": "Reykhólar",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 3380,
+    "name": "Reykir í Fnjóskadal",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 2197,
+    "name": "Reykir í Hrútafirði",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 31363,
+    "name": "Reykjanesbraut",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 31640,
+    "name": "Reykjanesviti",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1,
+    "name": "Reykjavík",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1478,
+    "name": "Reykjavík Geirsnef",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1470,
+    "name": "Reykjavík Háahlíð",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1469,
+    "name": "Reykjavík Hljómskálagarður",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1482,
+    "name": "Reykjavík Víðidalur",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 1477,
+    "name": "Reykjavíkurflugvöllur",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 36049,
+    "name": "Reynisfjall",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 4921,
+    "name": "Rif á Melrakkasléttu",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 6975,
+    "name": "Sandbúðir",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 31488,
+    "name": "Sandskeið",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 34559,
+    "name": "Sandvíkurheiði",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 400,
+    "name": "Sauðanesviti",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 3751,
+    "name": "Sauðanesviti",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 3433,
+    "name": "Sauðárkrókur flugvöllur",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 6222,
+    "name": "Sámsstaðir",
+    "region": "Suðurland"
+  },
+  {
+    "id": 3054,
+    "name": "Sáta",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 5993,
+    "name": "Seley",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 6300,
+    "name": "Selfoss",
+    "region": "Suðurland"
+  },
+  {
+    "id": 2641,
+    "name": "Seljalandsdalur - skíðaskáli",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 1471,
+    "name": "Seltjarnarnes Suðurnes",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 31380,
+    "name": "Selvogur",
+    "region": "Suðurland"
+  },
+  {
+    "id": 6748,
+    "name": "Setur",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 4182,
+    "name": "Seyðisfjörður",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 33750,
+    "name": "Siglufjarðarvegur",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 33751,
+    "name": "Siglufjarðarvegur Herkonugil",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 3752,
+    "name": "Siglufjörður",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 6499,
+    "name": "Skaftafell",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 3720,
+    "name": "Skagatá",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 6176,
+    "name": "Skarðsfjöruviti",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 1679,
+    "name": "Skarðsheiði Miðfitjahóll",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 36411,
+    "name": "Skálholt",
+    "region": "Suðurland"
+  },
+  {
+    "id": 4455,
+    "name": "Skjaldþingsstaðir",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 1578,
+    "name": "Skrauthólar",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 3591,
+    "name": "Staðarhóll",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 33643,
+    "name": "Stafá",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 1781,
+    "name": "Stafholtsey",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 36132,
+    "name": "Steinar",
+    "region": "Suðurland"
+  },
+  {
+    "id": 32474,
+    "name": "Steingrímsfjarðarheiði",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 31950,
+    "name": "Stórholt",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 6017,
+    "name": "Stórhöfði",
+    "region": "Suðurland"
+  },
+  {
+    "id": 2941,
+    "name": "Straumnesviti",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 1473,
+    "name": "Straumsvík",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 35880,
+    "name": "Streiti",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 178,
+    "name": "Stykkishólmur",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 2630,
+    "name": "Suðureyri",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 6012,
+    "name": "Surtsey",
+    "region": "Suðurland"
+  },
+  {
+    "id": 2646,
+    "name": "Súðavík",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 3292,
+    "name": "Svartárkot",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 32179,
+    "name": "Svínadalur í Dölum",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 2323,
+    "name": "Tálknafjörður",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 5872,
+    "name": "Teigarhorn",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 31578,
+    "name": "Tíðaskarð",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 34700,
+    "name": "Tjörnes - Gerðibrekka",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 3371,
+    "name": "Torfur",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 4019,
+    "name": "Upptyppingar",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 31948,
+    "name": "Vatnaleið",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 6546,
+    "name": "Vatnsfell",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 33431,
+    "name": "Vatnsskarð",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 34382,
+    "name": "Vatnsskarð eystra",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 802,
+    "name": "Vatnsskarðshólar",
+    "region": "Suðurland"
+  },
+  {
+    "id": 5988,
+    "name": "Vattarnes",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 6657,
+    "name": "Veiðivatnahraun",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 6015,
+    "name": "Vestmannaeyjabær",
+    "region": "Suðurland"
+  },
+  {
+    "id": 3477,
+    "name": "Végeirsstaðir í Fnjóskadal",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 35985,
+    "name": "Víkurgerði",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 33576,
+    "name": "Víkurskarð",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 34348,
+    "name": "Vopnafjarðarheiði",
+    "region": "Austurland að Glettingi"
+  },
+  {
+    "id": 4500,
+    "name": "Þeistareykir",
+    "region": "Norðurland eystra"
+  },
+  {
+    "id": 1596,
+    "name": "Þingvellir",
+    "region": "Suðurland"
+  },
+  {
+    "id": 36308,
+    "name": "Þjórsárbrú",
+    "region": "Suðurland"
+  },
+  {
+    "id": 5965,
+    "name": "Þórudalur",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 31387,
+    "name": "Þrengsli",
+    "region": "Suðurland"
+  },
+  {
+    "id": 32377,
+    "name": "Þröskuldar",
+    "region": "Breiðafjörður"
+  },
+  {
+    "id": 6760,
+    "name": "Þúfuver",
+    "region": "Miðhálendið"
+  },
+  {
+    "id": 33424,
+    "name": "Þverárfjall",
+    "region": "Strandir og Norðurland vestra"
+  },
+  {
+    "id": 2636,
+    "name": "Þverfjall",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 6208,
+    "name": "Þykkvibær",
+    "region": "Suðurland"
+  },
+  {
+    "id": 1685,
+    "name": "Þyrill",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 2655,
+    "name": "Æðey",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 32654,
+    "name": "Ögur",
+    "region": "Vestfirðir"
+  },
+  {
+    "id": 1493,
+    "name": "Ölkelduháls",
+    "region": "Faxaflói"
+  },
+  {
+    "id": 6134,
+    "name": "Önundarhorn",
+    "region": "Suðurland"
+  },
+  {
+    "id": 35305,
+    "name": "Öræfi",
+    "region": "Suðausturland"
+  },
+  {
+    "id": 35963,
+    "name": "Öxi",
+    "region": "Austfirðir"
+  },
+  {
+    "id": 33357,
+    "name": "Öxnadalsheiði",
+    "region": "Norðurland eystra"
+  }
+]
