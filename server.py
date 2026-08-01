@@ -15,6 +15,7 @@ import urllib.parse
 import urllib.request
 import urllib.error
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -22,6 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 PUBLIC_DIR = ROOT / "public"
 STATIONS_PATH = ROOT / "vedur-stations.json"
+STATION_OVERVIEW_PATH = ROOT / "station-overview.json"
 USER_AGENT = "weather-consensus-app/1.0 (personal project; contact hakond@gmail.com)"
 PORT = 8787
 
@@ -34,6 +36,9 @@ except ImportError:
 
 with open(STATIONS_PATH, encoding="utf-8") as f:
     VEDUR_STATIONS = json.load(f)
+
+with open(STATION_OVERVIEW_PATH, encoding="utf-8") as f:
+    STATION_OVERVIEW = json.load(f)
 
 
 def http_get(url: str, headers: dict | None = None, timeout: float = 10) -> bytes:
@@ -130,6 +135,38 @@ def fetch_vedur(station_id: int) -> list[dict]:
             }
         )
     return out
+
+
+def fetch_station_overview() -> list[dict]:
+    """Next-hour snapshot for every station in STATION_OVERVIEW.
+
+    vedur.is's forecast API takes one station id per request (no batching — comma or
+    repeated "ids" params silently only honor the first one), so covering a page full
+    of stations means one request per station. Fetched concurrently with a thread pool
+    since they're independent, I/O-bound calls; sequential would take ~15s+ for ~28
+    stations, threaded takes well under 2s.
+    """
+    target = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    def fetch_one(station: dict) -> dict:
+        try:
+            points = fetch_vedur(station["id"])
+            hit = nearest(points, target, max_delta_minutes=90)
+        except Exception:
+            hit = None
+        return {
+            "id": station["id"],
+            "name": station["name"],
+            "region": station["region"],
+            "time": hit["time"] if hit else None,
+            "temp_c": hit["temp_c"] if hit else None,
+            "wind_ms": hit["wind_ms"] if hit else None,
+            "direction": hit["direction"] if hit else None,
+            "condition": hit["condition"] if hit else None,
+        }
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        return list(pool.map(fetch_one, STATION_OVERVIEW))
 
 
 OPEN_METEO_MODELS = [("ecmwf_ifs025", "ecmwf"), ("gfs_seamless", "gfs"), ("icon_seamless", "icon")]
@@ -384,6 +421,10 @@ class Handler(BaseHTTPRequestHandler):
             q = (qs.get("q") or [""])[0]
             matches = search_stations(q)
             self._json({"matches": matches})
+            return
+
+        if parsed.path == "/api/stations":
+            self._json({"stations": fetch_station_overview()})
             return
 
         if parsed.path == "/api/forecast":

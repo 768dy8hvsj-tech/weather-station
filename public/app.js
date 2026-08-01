@@ -12,6 +12,13 @@ let debounceTimer = null;
 let activeIndex = -1;
 let currentSuggestions = [];
 
+const initialParams = new URLSearchParams(window.location.search);
+const initialPlace = initialParams.get("place");
+if (initialPlace) {
+  input.value = initialPlace;
+  loadForecast(initialPlace, initialParams.get("station_id"));
+}
+
 input.addEventListener("input", () => {
   clearTimeout(debounceTimer);
   const q = input.value.trim();

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Iceland Stations — Weather Consensus</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="page page-wide">
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <h1>Iceland Stations</h1>
+          <p class="subtitle">Next-hour conditions at a glance, from the Icelandic Met Office's own network.</p>
+        </div>
+        <a class="nav-link" href="/">Detailed forecast →</a>
+      </div>
+      <p id="updated-at" class="updated-at"></p>
+    </header>
+
+    <div id="status" class="status hidden"></div>
+
+    <div id="station-grid"></div>
+  </div>
+
+  <script src="/stations.js"></script>
+</body>
+</html>
