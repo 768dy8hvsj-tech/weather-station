@@ -117,8 +117,11 @@ async function loadForecast(name, stationId) {
   }
 }
 
+let currentDaylight = [];
+
 function renderResult(data) {
-  const { location, hours, reliability } = data;
+  const { location, hours, reliability, daylight } = data;
+  currentDaylight = daylight || [];
   locationNameEl.textContent = location.name;
   locationMetaEl.textContent = location.resolved_name;
   const labels = location.source_labels || ["yr.no"];
@@ -222,7 +225,7 @@ function renderHourRow(h) {
   const precipIcon = precipIconCategory(h.consensus.precip);
   const dirDeg = h.consensus.wind_dir_deg;
   const dirCompass = h.consensus.wind_dir_compass;
-  const golf = golfScore(h.consensus);
+  const golf = golfScore(h.consensus, h.time, currentDaylight);
 
   tr.innerHTML = `
     <td>${hh}:00</td>
@@ -279,16 +282,37 @@ function renderHourRow(h) {
 }
 
 /**
- * Simplified 3-tier Beaufort-ish scale: <=7 m/s roughly Beaufort 0-4 (light-moderate
- * breeze), <=14 m/s Beaufort 5-7 (fresh-strong breeze/near gale), above that gale+.
- * Bar fill is scaled against 25 m/s as a visual "full" reference, not a hard cap.
+ * WMO Beaufort wind force scale (0-12), official m/s bands and names — replaces an
+ * earlier invented 3-tier bucket. `tier` (good/warn/bad) is just for the bar color;
+ * `force`/`name` are the real classification, shown in the tooltip.
  */
-function windSeverity(ms) {
+const BEAUFORT_SCALE = [
+  { max: 0.5, force: 0, name: "Calm" },
+  { max: 1.5, force: 1, name: "Light air" },
+  { max: 3.3, force: 2, name: "Light breeze" },
+  { max: 5.4, force: 3, name: "Gentle breeze" },
+  { max: 7.9, force: 4, name: "Moderate breeze" },
+  { max: 10.7, force: 5, name: "Fresh breeze" },
+  { max: 13.8, force: 6, name: "Strong breeze" },
+  { max: 17.1, force: 7, name: "Near gale" },
+  { max: 20.7, force: 8, name: "Gale" },
+  { max: 24.4, force: 9, name: "Strong gale" },
+  { max: 28.4, force: 10, name: "Storm" },
+  { max: 32.6, force: 11, name: "Violent storm" },
+  { max: Infinity, force: 12, name: "Hurricane force" },
+];
+
+function beaufortForce(ms) {
   if (ms === null || ms === undefined) return null;
-  const pct = Math.max(4, Math.min(100, Math.round((ms / 25) * 100)));
-  const tier = ms <= 7 ? "good" : ms <= 14 ? "warn" : "bad";
-  const tierLabel = ms <= 7 ? "Light-moderate" : ms <= 14 ? "Fresh-strong" : "Gale+";
-  return { pct, tier, tierLabel };
+  return BEAUFORT_SCALE.find((b) => ms <= b.max);
+}
+
+function windSeverity(ms) {
+  const b = beaufortForce(ms);
+  if (!b) return null;
+  const pct = Math.max(4, Math.round((b.force / 12) * 100));
+  const tier = b.force <= 3 ? "good" : b.force <= 6 ? "warn" : "bad";
+  return { pct, tier, tierLabel: `Force ${b.force} – ${b.name}` };
 }
 
 function precipIconCategory(precip) {
@@ -298,11 +322,42 @@ function precipIconCategory(precip) {
 }
 
 /**
- * Simple, transparent points-off-100 heuristic for "is this good golf weather" —
- * not a real model, just a reasonable, explainable scoring of precip/wind/temp
- * against comfortable playing conditions. Purely a function of consensus data.
+ * NWS Wind Chill Temperature Index (metric form): 13.12 + 0.6215T - 11.37*V^0.16 +
+ * 0.3965*T*V^0.16, T in °C, V in km/h. Only valid/meaningful for T<=10°C and wind
+ * >=4.8km/h (~1.33 m/s) per NWS — outside that domain wind has negligible extra
+ * cooling effect on the body, so this just returns the actual temp unchanged rather
+ * than extrapolating a formula outside where it's been validated.
  */
-function golfScore(consensus) {
+function windChillC(tempC, windMs) {
+  if (tempC === null || tempC === undefined || windMs === null || windMs === undefined) return tempC;
+  const windKmh = windMs * 3.6;
+  if (tempC > 10 || windKmh < 4.8) return tempC;
+  const v16 = Math.pow(windKmh, 0.16);
+  return 13.12 + 0.6215 * tempC - 11.37 * v16 + 0.3965 * tempC * v16;
+}
+
+/** Strictly between sunrise and sunset for the matching day; null if no daylight data. */
+function isDaylight(timeIso, daylight) {
+  if (!daylight || !daylight.length) return null;
+  const dateKey = timeIso.slice(0, 10);
+  const day = daylight.find((d) => d.date === dateKey);
+  if (!day) return null;
+  const t = Date.parse(timeIso);
+  return t >= Date.parse(day.sunrise) && t <= Date.parse(day.sunset);
+}
+
+/**
+ * Points-off-100 heuristic for "is this good golf weather" — not a recognized
+ * industry model (there isn't one), but built on real reference points instead of
+ * invented ones: WMO Beaufort force for wind, NWS wind chill for "feels like" temp,
+ * and actual daylight hours (not weather, but you can't play in the dark).
+ */
+function golfScore(consensus, timeIso, daylight) {
+  const daylightNow = isDaylight(timeIso, daylight);
+  if (daylightNow === false) {
+    return { score: 0, label: "Dark", tier: "dark", notes: ["outside daylight hours"] };
+  }
+
   const temp = consensus.temp_c;
   const wind = consensus.wind_ms;
   const precip = consensus.precip || {};
@@ -325,36 +380,25 @@ function golfScore(consensus) {
     }
   }
 
-  if (wind <= 3) {
-    // calm, no deduction
-  } else if (wind <= 7) {
-    score -= 5;
-    notes.push("light wind");
-  } else if (wind <= 10) {
-    score -= 15;
-    notes.push("moderate wind");
-  } else if (wind <= 14) {
-    score -= 30;
-    notes.push("strong wind");
-  } else if (wind <= 20) {
-    score -= 50;
-    notes.push("very strong wind");
-  } else {
-    score -= 70;
-    notes.push("extreme wind");
+  const b = beaufortForce(wind);
+  const windDeductions = [0, 0, 0, 5, 10, 20, 35, 50, 70, 90, 90, 90, 90];
+  if (b && windDeductions[b.force] > 0) {
+    score -= windDeductions[b.force];
+    notes.push(`force ${b.force} wind (${b.name.toLowerCase()})`);
   }
 
-  if (temp >= 12 && temp <= 22) {
+  const feelsLike = windChillC(temp, wind);
+  if (feelsLike >= 12 && feelsLike <= 22) {
     // ideal range, no deduction
-  } else if ((temp >= 8 && temp < 12) || (temp > 22 && temp <= 26)) {
+  } else if ((feelsLike >= 8 && feelsLike < 12) || (feelsLike > 22 && feelsLike <= 26)) {
     score -= 10;
-    notes.push("cool/warm");
-  } else if ((temp >= 4 && temp < 8) || (temp > 26 && temp <= 30)) {
+    notes.push("cool/warm feels-like");
+  } else if ((feelsLike >= 4 && feelsLike < 8) || (feelsLike > 26 && feelsLike <= 30)) {
     score -= 20;
-    notes.push("cold/hot");
+    notes.push("cold/hot feels-like");
   } else {
     score -= 35;
-    notes.push("extreme temp");
+    notes.push("extreme feels-like temp");
   }
 
   score = Math.max(0, Math.min(100, score));

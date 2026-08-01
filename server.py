@@ -204,9 +204,11 @@ def fetch_station_overview(hours_ahead: float = 1) -> list[dict]:
 OPEN_METEO_MODELS = [("ecmwf_ifs025", "ecmwf"), ("gfs_seamless", "gfs"), ("icon_seamless", "icon")]
 
 
-def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
-    """Returns {model_key: [{time, temp_c, wind_ms, precip_mm, snow_cm}, ...]} for each model
-    in OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested.
+def fetch_openmeteo(lat: float, lon: float) -> dict:
+    """Returns {"models": {model_key: [{time, temp_c, wind_ms, precip_mm, snow_cm}, ...]},
+    "daylight": [{date, sunrise, sunset}, ...]}. One HTTP call covers both the per-model
+    hourly forecast and daily sunrise/sunset (the same request just gets a "daily" block
+    added alongside "hourly" — no separate call needed).
 
     "precipitation" is liquid-equivalent (mm, rain+snow combined); "snowfall" is snow
     accumulation specifically (cm) — together they let us tell rain from snow, which
@@ -217,6 +219,7 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
             "latitude": f"{lat:.4f}",
             "longitude": f"{lon:.4f}",
             "hourly": "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,snowfall,cloud_cover",
+            "daily": "sunrise,sunset",
             "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
             "timezone": "UTC",
             "forecast_days": 4,
@@ -251,7 +254,21 @@ def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
                 }
             )
         out[key] = points
-    return out
+
+    # With models= set, Open-Meteo suffixes daily fields per model too (sunrise_ecmwf_ifs025,
+    # etc.) even though sunrise/sunset are astronomical, not model-dependent — identical
+    # across all of them, so just take whichever model's columns are present.
+    daily = raw.get("daily", {})
+    sunrise_key = next((k for k in daily if k.startswith("sunrise")), None)
+    sunset_key = next((k for k in daily if k.startswith("sunset")), None)
+    daylight = []
+    if sunrise_key and sunset_key:
+        daylight = [
+            {"date": d, "sunrise": daily[sunrise_key][i] + ":00Z", "sunset": daily[sunset_key][i] + ":00Z"}
+            for i, d in enumerate(daily.get("time", []))
+        ]
+
+    return {"models": out, "daylight": daylight}
 
 
 RELIABILITY_WINDOW_HOURS = 24
@@ -509,9 +526,12 @@ class Handler(BaseHTTPRequestHandler):
                     vedur_points = []
 
             try:
-                openmeteo_points = fetch_openmeteo(geo["lat"], geo["lon"])
+                openmeteo_result = fetch_openmeteo(geo["lat"], geo["lon"])
+                openmeteo_points = openmeteo_result["models"]
+                daylight = openmeteo_result["daylight"]
             except Exception:
                 openmeteo_points = {}
+                daylight = []
 
             try:
                 reliability = fetch_reliability(geo["lat"], geo["lon"])
@@ -539,6 +559,7 @@ class Handler(BaseHTTPRequestHandler):
                     },
                     "hours": hours,
                     "reliability": reliability,
+                    "daylight": daylight,
                 }
             )
             return

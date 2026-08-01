@@ -291,6 +291,11 @@ body {
   background: color-mix(in srgb, var(--bad) 15%, transparent);
 }
 
+.grade-dark {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+}
+
 .golf-badge {
   display: inline-block;
   font-size: 11px;

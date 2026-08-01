@@ -50,10 +50,14 @@ exports.handler = async (event) => {
   }
 
   let openmeteoPoints = {};
+  let daylight = [];
   try {
-    openmeteoPoints = await fetchOpenMeteo(geo.lat, geo.lon);
+    const openmeteoResult = await fetchOpenMeteo(geo.lat, geo.lon);
+    openmeteoPoints = openmeteoResult.models;
+    daylight = openmeteoResult.daylight;
   } catch (e) {
     openmeteoPoints = {};
+    daylight = [];
   }
 
   let reliability = null;
@@ -84,6 +88,7 @@ exports.handler = async (event) => {
     },
     hours,
     reliability,
+    daylight,
   });
 };
 
@@ -163,8 +168,10 @@ const OPEN_METEO_MODELS = [
 ];
 
 /**
- * Returns {model_key: [{time, temp_c, wind_ms, precip_mm, snow_cm}, ...]} for each model
- * in OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested.
+ * Returns {models: {model_key: [{time, temp_c, wind_ms, precip_mm, snow_cm}, ...]},
+ * daylight: [{date, sunrise, sunset}, ...]}. One HTTP call covers both the per-model
+ * hourly forecast and daily sunrise/sunset (the same request just gets a "daily" block
+ * added alongside "hourly" — no separate call needed).
  *
  * "precipitation" is liquid-equivalent (mm, rain+snow combined); "snowfall" is snow
  * accumulation specifically (cm) — together they let us tell rain from snow, which
@@ -175,6 +182,7 @@ async function fetchOpenMeteo(lat, lon) {
     latitude: lat.toFixed(4),
     longitude: lon.toFixed(4),
     hourly: "temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,snowfall,cloud_cover",
+    daily: "sunrise,sunset",
     models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
     timezone: "UTC",
     forecast_days: "4",
@@ -207,7 +215,23 @@ async function fetchOpenMeteo(lat, lon) {
       };
     });
   }
-  return out;
+
+  // With models= set, Open-Meteo suffixes daily fields per model too (sunrise_ecmwf_ifs025,
+  // etc.) even though sunrise/sunset are astronomical, not model-dependent — identical
+  // across all of them, so just take whichever model's columns are present.
+  const daily = raw.daily || {};
+  const sunriseKey = Object.keys(daily).find((k) => k.startsWith("sunrise"));
+  const sunsetKey = Object.keys(daily).find((k) => k.startsWith("sunset"));
+  const daylight =
+    sunriseKey && sunsetKey
+      ? (daily.time || []).map((d, i) => ({
+          date: d,
+          sunrise: `${daily[sunriseKey][i]}:00Z`,
+          sunset: `${daily[sunsetKey][i]}:00Z`,
+        }))
+      : [];
+
+  return { models: out, daylight };
 }
 
 const RELIABILITY_WINDOW_HOURS = 24;
