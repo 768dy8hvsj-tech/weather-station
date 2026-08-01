@@ -119,6 +119,7 @@ body {
 
 .location-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
@@ -137,7 +138,6 @@ body {
 }
 
 .badge {
-  flex-shrink: 0;
   font-size: 12px;
   font-weight: 600;
   padding: 6px 10px;
@@ -145,7 +145,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .day-card {
@@ -163,8 +163,13 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
 table.hours {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -216,4 +221,12 @@ table.hours tr:last-child td { border-bottom: none; }
 .no-source {
   color: var(--text-muted);
   font-style: italic;
+}
+
+.openmeteo-cell {
+  line-height: 1.5;
+}
+
+.openmeteo-cell div {
+  white-space: nowrap;
 }

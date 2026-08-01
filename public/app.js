@@ -113,8 +113,9 @@ function renderResult(data) {
   const { location, hours } = data;
   locationNameEl.textContent = location.name;
   locationMetaEl.textContent = location.resolved_name;
-  sourceBadgeEl.textContent =
-    location.source_count === 2 ? "2 sources: yr.no + vedur.is" : "1 source: yr.no only";
+  const labels = location.source_labels || ["yr.no"];
+  const noun = location.source_count === 1 ? "source" : "sources";
+  sourceBadgeEl.textContent = `${location.source_count} ${noun}: ${labels.join(" + ")}`;
 
   const byDay = new Map();
   for (const h of hours) {
@@ -143,6 +144,7 @@ function renderResult(data) {
           <th>Wind</th>
           <th>yr.no</th>
           <th>vedur.is</th>
+          <th>Open-Meteo</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -151,12 +153,17 @@ function renderResult(data) {
     for (const h of dayHours) {
       tbody.appendChild(renderHourRow(h));
     }
-    card.appendChild(table);
+    const scroll = document.createElement("div");
+    scroll.className = "table-scroll";
+    scroll.appendChild(table);
+    card.appendChild(scroll);
     daysEl.appendChild(card);
   }
 
   resultEl.classList.remove("hidden");
 }
+
+const OPENMETEO_LABELS = { ecmwf: "ECMWF", gfs: "GFS", icon: "ICON" };
 
 function renderHourRow(h) {
   const tr = document.createElement("tr");
@@ -164,16 +171,17 @@ function renderHourRow(h) {
   const hh = String(time.getUTCHours()).padStart(2, "0");
 
   const spreadClass =
-    h.consensus.temp_spread <= 1 ? "spread-good" : h.consensus.temp_spread <= 2.5 ? "spread-warn" : "spread-bad";
+    h.consensus.temp_spread <= 1.5 ? "spread-good" : h.consensus.temp_spread <= 3 ? "spread-warn" : "spread-bad";
 
   const yrno = h.sources.yrno;
   const vedur = h.sources.vedur;
+  const openmeteo = h.sources.openmeteo;
 
   tr.innerHTML = `
     <td>${hh}:00</td>
     <td>
       <span class="consensus-temp">${fmtTemp(h.consensus.temp_c)}</span>
-      ${h.consensus.source_count > 1 ? `<span class="spread-dot ${spreadClass}" title="${h.consensus.temp_spread}°C spread between sources"></span>` : ""}
+      ${h.consensus.source_count > 1 ? `<span class="spread-dot ${spreadClass}" title="${h.consensus.temp_spread}°C spread across ${h.consensus.source_count} sources"></span>` : ""}
     </td>
     <td>${fmtWind(h.consensus.wind_ms)}</td>
     <td class="source-cell">${
@@ -186,6 +194,16 @@ function renderHourRow(h) {
     <td class="source-cell">${
       vedur
         ? `<span class="val">${fmtTemp(vedur.temp_c)}</span> · ${fmtWind(vedur.wind_ms)} ${vedur.direction || ""}`
+        : `<span class="no-source">—</span>`
+    }</td>
+    <td class="source-cell openmeteo-cell">${
+      openmeteo
+        ? Object.entries(openmeteo)
+            .map(
+              ([key, v]) =>
+                `<div>${OPENMETEO_LABELS[key] || key} <span class="val">${fmtTemp(v.temp_c)}</span></div>`
+            )
+            .join("")
         : `<span class="no-source">—</span>`
     }</td>
   `;

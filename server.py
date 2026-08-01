@@ -1,9 +1,11 @@
 """
 Weather consensus backend. Pure standard-library Python (no pip installs required).
 
-Combines two independently-sourced forecasts for a given place:
+Combines several independently-run forecast sources for a given place:
   - MET Norway "Locationforecast" API (api.met.no) — global coverage, lat/lon based.
   - Icelandic Met Office "xmlweather" API (xmlweather.vedur.is) — Iceland only, station based.
+  - Open-Meteo (api.open-meteo.com) — keyless proxy in front of several raw global NWP
+    models (ECMWF, NOAA GFS, DWD ICON), fetched in one call.
 
 Serves the static frontend from ./public and a small JSON API under /api/*.
 """
@@ -130,6 +132,48 @@ def fetch_vedur(station_id: int) -> list[dict]:
     return out
 
 
+OPEN_METEO_MODELS = [("ecmwf_ifs025", "ecmwf"), ("gfs_seamless", "gfs"), ("icon_seamless", "icon")]
+
+
+def fetch_openmeteo(lat: float, lon: float) -> dict[str, list[dict]]:
+    """Returns {model_key: [{time, temp_c, wind_ms, precip_mm}, ...]} for each model in
+    OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested."""
+    url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(
+        {
+            "latitude": f"{lat:.4f}",
+            "longitude": f"{lon:.4f}",
+            "hourly": "temperature_2m,wind_speed_10m,precipitation",
+            "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
+            "timezone": "UTC",
+            "forecast_days": 4,
+        }
+    )
+    raw = json.loads(http_get(url))
+    hourly = raw.get("hourly", {})
+    times = hourly.get("time", [])
+
+    out = {}
+    for model_id, key in OPEN_METEO_MODELS:
+        temps = hourly.get(f"temperature_2m_{model_id}")
+        winds = hourly.get(f"wind_speed_10m_{model_id}")
+        precs = hourly.get(f"precipitation_{model_id}")
+        if temps is None:
+            continue
+        points = []
+        for i, t in enumerate(times):
+            wind_kmh = winds[i] if winds and i < len(winds) else None
+            points.append(
+                {
+                    "time": f"{t}:00Z",
+                    "temp_c": temps[i] if i < len(temps) else None,
+                    "wind_ms": round(wind_kmh / 3.6, 1) if wind_kmh is not None else None,
+                    "precip_mm": precs[i] if precs and i < len(precs) else None,
+                }
+            )
+        out[key] = points
+    return out
+
+
 def nearest(points: list[dict], target: datetime, max_delta_minutes: int = 40) -> dict | None:
     best, best_delta = None, None
     for p in points:
@@ -142,7 +186,9 @@ def nearest(points: list[dict], target: datetime, max_delta_minutes: int = 40) -
     return None
 
 
-def build_consensus(yrno_points: list[dict], vedur_points: list[dict]) -> list[dict]:
+def build_consensus(
+    yrno_points: list[dict], vedur_points: list[dict], openmeteo_points: dict[str, list[dict]]
+) -> list[dict]:
     hours = []
     now = datetime.now(timezone.utc)
     horizon = now + timedelta(hours=72)
@@ -151,8 +197,17 @@ def build_consensus(yrno_points: list[dict], vedur_points: list[dict]) -> list[d
         if t < now - timedelta(hours=1) or t > horizon:
             continue
         vp = nearest(vedur_points, t) if vedur_points else None
-        temps = [v for v in [yp.get("temp_c"), vp.get("temp_c") if vp else None] if v is not None]
-        winds = [v for v in [yp.get("wind_ms"), vp.get("wind_ms") if vp else None] if v is not None]
+        om = {}
+        for key, points in openmeteo_points.items():
+            p = nearest(points, t)
+            if p:
+                om[key] = p
+
+        temps = [yp.get("temp_c"), vp.get("temp_c") if vp else None] + [p.get("temp_c") for p in om.values()]
+        winds = [yp.get("wind_ms"), vp.get("wind_ms") if vp else None] + [p.get("wind_ms") for p in om.values()]
+        temps = [v for v in temps if v is not None]
+        winds = [v for v in winds if v is not None]
+
         hours.append(
             {
                 "time": yp["time"],
@@ -171,6 +226,14 @@ def build_consensus(yrno_points: list[dict], vedur_points: list[dict]) -> list[d
                             "direction": vp.get("direction"),
                         }
                         if vp
+                        else None
+                    ),
+                    "openmeteo": (
+                        {
+                            key: {"temp_c": p.get("temp_c"), "wind_ms": p.get("wind_ms")}
+                            for key, p in om.items()
+                        }
+                        if om
                         else None
                     ),
                 },
@@ -235,7 +298,19 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     vedur_points = []
 
-            hours = build_consensus(yrno_points, vedur_points)
+            try:
+                openmeteo_points = fetch_openmeteo(geo["lat"], geo["lon"])
+            except Exception:
+                openmeteo_points = {}
+
+            hours = build_consensus(yrno_points, vedur_points, openmeteo_points)
+
+            source_labels = ["yr.no"]
+            if vedur_points:
+                source_labels.append("vedur.is")
+            if openmeteo_points:
+                source_labels.append("Open-Meteo (" + "/".join(k.upper() for k in openmeteo_points) + ")")
+
             self._json(
                 {
                     "location": {
@@ -244,7 +319,8 @@ class Handler(BaseHTTPRequestHandler):
                         "lon": geo["lon"],
                         "resolved_name": geo["display_name"],
                         "vedur_station_id": int(station_id) if station_id else None,
-                        "source_count": 2 if vedur_points else 1,
+                        "source_count": 1 + (1 if vedur_points else 0) + len(openmeteo_points),
+                        "source_labels": source_labels,
                     },
                     "hours": hours,
                 }

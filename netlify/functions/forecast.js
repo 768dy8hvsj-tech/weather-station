@@ -26,7 +26,21 @@ exports.handler = async (event) => {
     }
   }
 
-  const hours = buildConsensus(yrnoPoints, vedurPoints);
+  let openmeteoPoints = {};
+  try {
+    openmeteoPoints = await fetchOpenMeteo(geo.lat, geo.lon);
+  } catch (e) {
+    openmeteoPoints = {};
+  }
+
+  const hours = buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints);
+
+  const sourceLabels = ["yr.no"];
+  if (vedurPoints.length) sourceLabels.push("vedur.is");
+  const openmeteoKeys = Object.keys(openmeteoPoints);
+  if (openmeteoKeys.length) {
+    sourceLabels.push(`Open-Meteo (${openmeteoKeys.map((k) => k.toUpperCase()).join("/")})`);
+  }
 
   return json({
     location: {
@@ -35,7 +49,8 @@ exports.handler = async (event) => {
       lon: geo.lon,
       resolved_name: geo.display_name,
       vedur_station_id: stationId ? Number(stationId) : null,
-      source_count: vedurPoints.length ? 2 : 1,
+      source_count: 1 + (vedurPoints.length ? 1 : 0) + openmeteoKeys.length,
+      source_labels: sourceLabels,
     },
     hours,
   });
@@ -109,6 +124,50 @@ async function fetchVedur(stationId) {
   return points;
 }
 
+const OPEN_METEO_MODELS = [
+  ["ecmwf_ifs025", "ecmwf"],
+  ["gfs_seamless", "gfs"],
+  ["icon_seamless", "icon"],
+];
+
+/**
+ * Returns {model_key: [{time, temp_c, wind_ms, precip_mm}, ...]} for each model in
+ * OPEN_METEO_MODELS. One HTTP call regardless of how many models are requested.
+ */
+async function fetchOpenMeteo(lat, lon) {
+  const params = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: "temperature_2m,wind_speed_10m,precipitation",
+    models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
+    timezone: "UTC",
+    forecast_days: "4",
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const raw = await res.json();
+  const hourly = raw.hourly || {};
+  const times = hourly.time || [];
+
+  const out = {};
+  for (const [modelId, key] of OPEN_METEO_MODELS) {
+    const temps = hourly[`temperature_2m_${modelId}`];
+    const winds = hourly[`wind_speed_10m_${modelId}`];
+    const precs = hourly[`precipitation_${modelId}`];
+    if (!temps) continue;
+    out[key] = times.map((t, i) => {
+      const windKmh = winds ? winds[i] : null;
+      return {
+        time: `${t}:00Z`,
+        temp_c: temps[i] ?? null,
+        wind_ms: windKmh !== null && windKmh !== undefined ? round1(windKmh / 3.6) : null,
+        precip_mm: precs ? precs[i] ?? null : null,
+      };
+    });
+  }
+  return out;
+}
+
 function tag(block, name) {
   const m = block.match(new RegExp(`<${name}>([^<]*)</${name}>`));
   return m ? m[1] : null;
@@ -127,18 +186,30 @@ function nearest(points, targetMs, maxDeltaMinutes = 40) {
   return bestDelta <= maxDeltaMinutes * 60 * 1000 ? best : null;
 }
 
-function buildConsensus(yrnoPoints, vedurPoints) {
+function buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints) {
   const hours = [];
   const now = Date.now();
   const horizon = now + 72 * 3600 * 1000;
+  const openmeteoEntries = Object.entries(openmeteoPoints);
 
   for (const yp of yrnoPoints) {
     const t = Date.parse(yp.time);
     if (t < now - 3600 * 1000 || t > horizon) continue;
 
     const vp = vedurPoints.length ? nearest(vedurPoints, t) : null;
-    const temps = [yp.temp_c, vp?.temp_c].filter((v) => v !== null && v !== undefined);
-    const winds = [yp.wind_ms, vp?.wind_ms].filter((v) => v !== null && v !== undefined);
+    const om = {};
+    for (const [key, points] of openmeteoEntries) {
+      const p = nearest(points, t);
+      if (p) om[key] = p;
+    }
+    const omValues = Object.values(om);
+
+    const temps = [yp.temp_c, vp?.temp_c, ...omValues.map((p) => p.temp_c)].filter(
+      (v) => v !== null && v !== undefined
+    );
+    const winds = [yp.wind_ms, vp?.wind_ms, ...omValues.map((p) => p.wind_ms)].filter(
+      (v) => v !== null && v !== undefined
+    );
 
     hours.push({
       time: yp.time,
@@ -146,6 +217,11 @@ function buildConsensus(yrnoPoints, vedurPoints) {
         yrno: { temp_c: yp.temp_c, wind_ms: yp.wind_ms, precip_mm: yp.precip_mm, symbol: yp.symbol },
         vedur: vp
           ? { temp_c: vp.temp_c, wind_ms: vp.wind_ms, condition: vp.condition, direction: vp.direction }
+          : null,
+        openmeteo: omValues.length
+          ? Object.fromEntries(
+              Object.entries(om).map(([key, p]) => [key, { temp_c: p.temp_c, wind_ms: p.wind_ms }])
+            )
           : null,
       },
       consensus: {
