@@ -406,6 +406,16 @@ function golfScore(consensus, timeIso, daylight) {
 
   score = Math.max(0, Math.min(100, score));
 
+  // "Excellent" is a specific set of conditions, not just a high score: clear/bright
+  // sky, wind <=2 m/s, feels-like >16°C. A high score reached some other way (e.g.
+  // overcast but calm and warm) is capped at Good instead.
+  const sky = skyCategory({ cloudCoverPct: consensus.cloud_cover_pct, precipType: precip.type });
+  const meetsExcellent = sky === "clear" && wind <= 2 && feelsLike > 16;
+  if (score >= 85 && !meetsExcellent) {
+    score = 84;
+    notes.push("capped: Excellent needs clear sky, wind ≤2m/s, feels-like >16°C");
+  }
+
   let label, tier;
   if (score >= 85) {
     label = "Excellent";
