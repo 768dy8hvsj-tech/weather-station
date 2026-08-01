@@ -1,15 +1,43 @@
 const gridEl = document.getElementById("station-grid");
 const statusEl = document.getElementById("status");
 const updatedEl = document.getElementById("updated-at");
+const sliderEl = document.getElementById("hours-slider");
+const sliderValueEl = document.getElementById("slider-value");
 
 const REFRESH_MS = 10 * 60 * 1000;
 
+let hoursAhead = Number(sliderEl.value);
+let fetchDebounce = null;
+
+updateSliderLabel();
 loadStations();
 setInterval(loadStations, REFRESH_MS);
 
+sliderEl.addEventListener("input", () => {
+  hoursAhead = Number(sliderEl.value);
+  updateSliderLabel();
+  clearTimeout(fetchDebounce);
+  fetchDebounce = setTimeout(loadStations, 200);
+});
+
+function updateSliderLabel() {
+  if (hoursAhead === 0) {
+    sliderValueEl.textContent = "Now";
+    return;
+  }
+  const target = new Date(Date.now() + hoursAhead * 3600 * 1000);
+  const label = target.toLocaleString("en-GB", {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+  sliderValueEl.textContent = `+${hoursAhead}h (${label} UTC)`;
+}
+
 async function loadStations() {
   try {
-    const res = await fetch("/api/stations");
+    const res = await fetch(`/api/stations?hours=${hoursAhead}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Request failed");
     render(data.stations);
@@ -63,7 +91,7 @@ function renderCard(s) {
     <div class="station-icon icon-${category}">${WEATHER_ICONS[category] || WEATHER_ICONS.unknown}</div>
     <div class="station-info">
       <div class="station-name">${s.name}</div>
-      <div class="station-condition">${s.condition || "—"} · next hour ${hh}</div>
+      <div class="station-condition">${s.condition || "—"} · ${hh}</div>
     </div>
     <div class="station-readout">
       <div class="station-temp">${fmtTemp(s.temp_c)}</div>

@@ -137,21 +137,27 @@ def fetch_vedur(station_id: int) -> list[dict]:
     return out
 
 
-def fetch_station_overview() -> list[dict]:
-    """Next-hour snapshot for every station in STATION_OVERVIEW.
+def fetch_station_overview(hours_ahead: float = 1) -> list[dict]:
+    """Snapshot for every station in STATION_OVERVIEW at now + hours_ahead.
 
     vedur.is's forecast API takes one station id per request (no batching — comma or
     repeated "ids" params silently only honor the first one), so covering a page full
     of stations means one request per station. Fetched concurrently with a thread pool
     since they're independent, I/O-bound calls; sequential would take ~15s+ for ~28
     stations, threaded takes well under 2s.
+
+    vedur.is's forecast resolution is hourly for roughly the first two days and 6-hourly
+    beyond that, so the match window widens for distant targets rather than using one
+    fixed tolerance — a target that lands between two 6-hourly points still needs to
+    resolve to the nearer one instead of coming back empty.
     """
-    target = datetime.now(timezone.utc) + timedelta(hours=1)
+    target = datetime.now(timezone.utc) + timedelta(hours=hours_ahead)
+    max_delta_minutes = 90 if hours_ahead <= 48 else 210
 
     def fetch_one(station: dict) -> dict:
         try:
             points = fetch_vedur(station["id"])
-            hit = nearest(points, target, max_delta_minutes=90)
+            hit = nearest(points, target, max_delta_minutes=max_delta_minutes)
         except Exception:
             hit = None
         return {
@@ -424,7 +430,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/stations":
-            self._json({"stations": fetch_station_overview()})
+            try:
+                hours_ahead = float((qs.get("hours") or ["1"])[0])
+            except ValueError:
+                hours_ahead = 1
+            hours_ahead = max(0, min(72, hours_ahead))
+            self._json({"stations": fetch_station_overview(hours_ahead), "hours_ahead": hours_ahead})
             return
 
         if parsed.path == "/api/forecast":

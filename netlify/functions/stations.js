@@ -3,23 +3,34 @@ const overview = require("../../station-overview.json");
 const USER_AGENT = "weather-consensus-app/1.0 (personal project; contact hakond@gmail.com)";
 
 /**
- * Next-hour snapshot for every station in station-overview.json.
+ * Snapshot for every station in station-overview.json at now + hoursAhead.
  *
  * vedur.is's forecast API takes one station id per request (no batching — comma or
  * repeated "ids" params silently only honor the first one), so covering a page full
  * of stations means one request per station. Fetched concurrently via Promise.all
  * since they're independent, I/O-bound calls.
+ *
+ * vedur.is's forecast resolution is hourly for roughly the first two days and 6-hourly
+ * beyond that, so the match window widens for distant targets rather than using one
+ * fixed tolerance — a target that lands between two 6-hourly points still needs to
+ * resolve to the nearer one instead of coming back empty.
  */
-exports.handler = async () => {
-  const target = Date.now() + 3600 * 1000;
-  const results = await Promise.all(overview.map((station) => fetchOne(station, target)));
-  return json({ stations: results });
+exports.handler = async (event) => {
+  const params = event.queryStringParameters || {};
+  let hoursAhead = parseFloat(params.hours ?? "1");
+  if (Number.isNaN(hoursAhead)) hoursAhead = 1;
+  hoursAhead = Math.max(0, Math.min(72, hoursAhead));
+
+  const target = Date.now() + hoursAhead * 3600 * 1000;
+  const maxDelta = hoursAhead <= 48 ? 90 : 210;
+  const results = await Promise.all(overview.map((station) => fetchOne(station, target, maxDelta)));
+  return json({ stations: results, hours_ahead: hoursAhead });
 };
 
-async function fetchOne(station, targetMs) {
+async function fetchOne(station, targetMs, maxDelta) {
   try {
     const points = await fetchVedur(station.id);
-    const hit = nearest(points, targetMs, 90);
+    const hit = nearest(points, targetMs, maxDelta);
     return {
       id: station.id,
       name: station.name,

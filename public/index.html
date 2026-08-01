@@ -12,12 +12,21 @@
       <div class="topbar-row">
         <div>
           <h1>Iceland Stations</h1>
-          <p class="subtitle">Next-hour conditions at a glance, from the Icelandic Met Office's own network.</p>
+          <p class="subtitle">Conditions at a glance, from the Icelandic Met Office's own network.</p>
         </div>
         <a class="nav-link" href="/forecast.html">Detailed forecast →</a>
       </div>
       <p id="updated-at" class="updated-at"></p>
     </header>
+
+    <div class="slider-panel">
+      <div class="slider-header">
+        <span class="slider-label">Forecast for</span>
+        <span id="slider-value" class="slider-value">Now</span>
+      </div>
+      <input id="hours-slider" class="hours-slider" type="range" min="0" max="72" step="4" value="0" />
+      <div class="slider-ticks"><span>Now</span><span>+72h</span></div>
+    </div>
 
     <div id="status" class="status hidden"></div>
 
