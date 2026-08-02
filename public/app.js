@@ -144,7 +144,19 @@ function renderResult(data) {
 
     const title = document.createElement("div");
     title.className = "day-title";
-    title.textContent = formatDayTitle(dayKey);
+    const titleText = document.createElement("span");
+    titleText.textContent = formatDayTitle(dayKey);
+    title.appendChild(titleText);
+
+    const bestWindow = findBestWindow(dayHours, currentDaylight);
+    if (bestWindow) {
+      const startHH = String(new Date(bestWindow.times[0]).getUTCHours()).padStart(2, "0");
+      const endHH = String((new Date(bestWindow.times[bestWindow.times.length - 1]).getUTCHours() + 1) % 24).padStart(2, "0");
+      const badge = document.createElement("span");
+      badge.className = "best-window-badge";
+      badge.innerHTML = `${GOLF_FLAG_ICON} Best window ${startHH}:00–${endHH}:00`;
+      title.appendChild(badge);
+    }
     card.appendChild(title);
 
     const table = document.createElement("table");
@@ -165,8 +177,11 @@ function renderResult(data) {
       <tbody></tbody>
     `;
     const tbody = table.querySelector("tbody");
+    const bestTimes = new Set(bestWindow ? bestWindow.times : []);
     for (const h of dayHours) {
-      tbody.appendChild(renderHourRow(h));
+      const row = renderHourRow(h);
+      if (bestTimes.has(h.time)) row.classList.add("best-window-row");
+      tbody.appendChild(row);
     }
     const scroll = document.createElement("div");
     scroll.className = "table-scroll";
@@ -176,6 +191,37 @@ function renderResult(data) {
   }
 
   resultEl.classList.remove("hidden");
+}
+
+/**
+ * Best contiguous 4-hour window in a day, by total golf score, but only returned if
+ * at least one hour in the window reaches Fair or better (score >=45) — a window of
+ * uniformly poor hours shouldn't get highlighted just for being the "least bad".
+ */
+function findBestWindow(dayHours, daylight) {
+  const WINDOW_SIZE = 4;
+  const MIN_QUALIFYING_SCORE = 45;
+  if (dayHours.length < WINDOW_SIZE) return null;
+
+  let best = null;
+  for (let i = 0; i <= dayHours.length - WINDOW_SIZE; i++) {
+    const window = dayHours.slice(i, i + WINDOW_SIZE);
+
+    // Past ~48h, vedur.is/yr.no's data resolution drops from hourly to 6-hourly, so
+    // 4 consecutive array entries stop meaning "4 consecutive hours" — skip any window
+    // whose span isn't actually (WINDOW_SIZE - 1) hours, real time, start to end.
+    const spanMs = Date.parse(window[window.length - 1].time) - Date.parse(window[0].time);
+    if (spanMs !== (WINDOW_SIZE - 1) * 3600 * 1000) continue;
+
+    const scores = window.map((h) => golfScore(h.consensus, h.time, daylight));
+    if (scores.some((s) => s === null)) continue;
+    if (!scores.some((s) => s.score >= MIN_QUALIFYING_SCORE)) continue;
+    const total = scores.reduce((sum, s) => sum + s.score, 0);
+    if (!best || total > best.total) {
+      best = { total, times: window.map((h) => h.time) };
+    }
+  }
+  return best;
 }
 
 const OPENMETEO_LABELS = { ecmwf: "ECMWF", gfs: "GFS", icon: "ICON" };
@@ -252,7 +298,7 @@ function renderHourRow(h) {
     </td>
     <td>${
       golf
-        ? `<span class="golf-badge grade-${golf.tier}" title="Score ${golf.score}/100 — ${golf.notes.length ? golf.notes.join(", ") : "ideal conditions"}">${golf.label} <span class="golf-score-num">${golf.score}</span></span>`
+        ? `<div class="golf-cell"><span class="golf-badge grade-${golf.tier}" title="Score ${golf.score}/100 — ${golf.notes.length ? golf.notes.join(", ") : "ideal conditions"}">${golf.label}</span>${golfFactorIcons(golf)}</div>`
         : `<span class="no-source">—</span>`
     }</td>
     <td class="source-cell">${
@@ -365,26 +411,35 @@ function golfScore(consensus, timeIso, daylight) {
 
   let score = 100;
   const notes = [];
+  const factors = [];
 
   if (precip.type === "rain" || precip.type === "snow") {
     const mm = precip.mm || 0;
+    let severity;
     if (mm < 1) {
       score -= 15;
       notes.push("light precip");
+      severity = 1;
     } else if (mm < 3) {
       score -= 30;
       notes.push("moderate precip");
+      severity = 2;
     } else {
       score -= 50;
       notes.push("heavy precip");
+      severity = 3;
     }
+    factors.push({ type: "precip", kind: precip.type, severity, title: notes[notes.length - 1] });
   }
 
   const b = beaufortForce(wind);
   const windDeductions = [0, 0, 0, 5, 10, 20, 35, 50, 70, 90, 90, 90, 90];
   if (b && windDeductions[b.force] > 0) {
     score -= windDeductions[b.force];
-    notes.push(`force ${b.force} wind (${b.name.toLowerCase()})`);
+    const note = `force ${b.force} wind (${b.name.toLowerCase()})`;
+    notes.push(note);
+    const severity = b.force <= 4 ? 1 : b.force <= 6 ? 2 : 3;
+    factors.push({ type: "wind", severity, dirDeg: consensus.wind_dir_deg, title: note });
   }
 
   // Sized so each band caps the best-case label even with perfect wind/precip:
@@ -393,15 +448,23 @@ function golfScore(consensus, timeIso, daylight) {
   const feelsLike = windChillC(temp, wind);
   if (feelsLike >= 12 && feelsLike <= 22) {
     // ideal range, no deduction
-  } else if ((feelsLike >= 8 && feelsLike < 12) || (feelsLike > 22 && feelsLike <= 26)) {
-    score -= 10;
-    notes.push("cool/warm feels-like");
-  } else if ((feelsLike >= 4 && feelsLike < 8) || (feelsLike > 26 && feelsLike <= 30)) {
-    score -= 40;
-    notes.push("cold/hot feels-like");
   } else {
-    score -= 60;
-    notes.push("extreme feels-like temp");
+    const kind = feelsLike < 12 ? "cold" : "hot";
+    let severity;
+    if ((feelsLike >= 8 && feelsLike < 12) || (feelsLike > 22 && feelsLike <= 26)) {
+      score -= 10;
+      notes.push("cool/warm feels-like");
+      severity = 1;
+    } else if ((feelsLike >= 4 && feelsLike < 8) || (feelsLike > 26 && feelsLike <= 30)) {
+      score -= 40;
+      notes.push("cold/hot feels-like");
+      severity = 2;
+    } else {
+      score -= 60;
+      notes.push("extreme feels-like temp");
+      severity = 3;
+    }
+    factors.push({ type: "temp", kind, severity, title: `${notes[notes.length - 1]} (${feelsLike.toFixed(1)}°C)` });
   }
 
   score = Math.max(0, Math.min(100, score));
@@ -435,7 +498,50 @@ function golfScore(consensus, timeIso, daylight) {
     tier = "bad";
   }
 
-  return { score, label, tier, notes };
+  return { score, label, tier, notes, factors };
+}
+
+/**
+ * Renders each scoring factor as 1-3 repeated small icons (escalating with severity)
+ * instead of a single number — wind arrows rotated to actual direction, raindrops/
+ * snowflakes for precip, thermometers for cold/hot. No icons at all means nothing
+ * dragged the score down.
+ */
+function golfFactorIcons(golf) {
+  if (!golf || !golf.factors || !golf.factors.length) return "";
+  return golf.factors
+    .map((f) => {
+      if (f.type === "wind") {
+        const rotation = ((f.dirDeg ?? 0) + 180) % 360;
+        const sevClass = f.severity <= 1 ? "sev-1" : f.severity <= 2 ? "sev-2" : "sev-3";
+        const icon = Array.from(
+          { length: f.severity },
+          () => `<span class="factor-icon wind-factor" style="transform:rotate(${rotation}deg)">${WIND_ARROW}</span>`
+        ).join("");
+        return `<span class="factor-group ${sevClass}" title="${f.title}">${icon}</span>`;
+      }
+      if (f.type === "precip") {
+        const sevClass = f.severity <= 1 ? "sev-1" : f.severity <= 2 ? "sev-2" : "sev-3";
+        const iconSvg = f.kind === "snow" ? SNOWFLAKE_ICON : RAINDROP_ICON;
+        const colorClass = f.kind === "snow" ? "precip-factor-snow" : "precip-factor-rain";
+        const icon = Array.from(
+          { length: f.severity },
+          () => `<span class="factor-icon ${colorClass}">${iconSvg}</span>`
+        ).join("");
+        return `<span class="factor-group ${sevClass}" title="${f.title}">${icon}</span>`;
+      }
+      if (f.type === "temp") {
+        const sevClass = f.severity <= 1 ? "sev-1" : f.severity <= 2 ? "sev-2" : "sev-3";
+        const colorClass = f.kind === "cold" ? "temp-factor-cold" : "temp-factor-hot";
+        const icon = Array.from(
+          { length: f.severity },
+          () => `<span class="factor-icon ${colorClass}">${THERMOMETER_ICON}</span>`
+        ).join("");
+        return `<span class="factor-group ${sevClass}" title="${f.title}">${icon}</span>`;
+      }
+      return "";
+    })
+    .join("");
 }
 
 function fmtPrecip(precip) {

@@ -14,6 +14,17 @@ function svg(inner) {
 // Points up by default; rotate via CSS transform to the direction the wind is blowing toward.
 const WIND_ARROW = svg(`<path d="M12 20V5M12 5l-5 5M12 5l5 5"/>`);
 
+// Small standalone factor icons for the golf score badge (distinct from the WEATHER_ICONS
+// cloud-based set, which are full sky-condition icons, not single repeatable severity units).
+const RAINDROP_ICON = svg(`<path d="M12 3.5S6.5 11 6.5 15a5.5 5.5 0 0 0 11 0c0-4-5.5-11.5-5.5-11.5Z"/>`);
+const SNOWFLAKE_ICON = svg(
+  `<path d="M12 2.5v19M4 7l16 10M20 7 4 17" stroke-width="1.5"/>` +
+    `<path d="M12 2.5 9.8 4.7M12 2.5l2.2 2.2M12 21.5l-2.2-2.2M12 21.5l2.2-2.2` +
+    `M4 7l2.8.3M4 7l1-2.6M20 7l-2.8.3M20 7l-1-2.6M4 17l2.8-.3M4 17l1 2.6M20 17l-2.8-.3M20 17l-1 2.6" stroke-width="1.3"/>`
+);
+const THERMOMETER_ICON = svg(`<rect x="10" y="3" width="4" height="12" rx="2"/><circle cx="12" cy="18" r="3"/>`);
+const GOLF_FLAG_ICON = svg(`<path d="M6 21V3"/><path d="M6 4l10 3-10 3"/>`);
+
 const WEATHER_ICONS = {
   clear: svg(`<circle cx="12" cy="12" r="4.3"/>${SUN_RAYS}`),
   "partly-cloudy": svg(
