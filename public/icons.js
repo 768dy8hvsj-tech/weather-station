@@ -24,6 +24,11 @@ const SNOWFLAKE_ICON = svg(
 );
 const THERMOMETER_ICON = svg(`<rect x="10" y="3" width="4" height="12" rx="2"/><circle cx="12" cy="18" r="3"/>`);
 const GOLF_FLAG_ICON = svg(`<path d="M6 21V3"/><path d="M6 4l10 3-10 3"/>`);
+// Standing water / puddle, for the Course Conditions badge — a ground-level ellipse with
+// a shallow arc suggesting a wet patch, distinct from the falling-rain RAINDROP_ICON.
+const PUDDLE_ICON = svg(
+  `<ellipse cx="12" cy="18" rx="7.5" ry="2.3"/><path d="M7 17.3c.6-3.3 2.3-5.6 5-5.6s4.4 2.3 5 5.6" stroke-width="1.4"/>`
+);
 
 const WEATHER_ICONS = {
   clear: svg(`<circle cx="12" cy="12" r="4.3"/>${SUN_RAYS}`),

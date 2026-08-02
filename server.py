@@ -223,6 +223,10 @@ def fetch_openmeteo(lat: float, lon: float) -> dict:
             "models": ",".join(model_id for model_id, _ in OPEN_METEO_MODELS),
             "timezone": "UTC",
             "forecast_days": 4,
+            # Extra trailing days aren't shown in the hourly table (build_consensus still
+            # filters to now-1h.. onward for that), but they're what compute_ground_conditions
+            # uses to know what actually fell before "now" — see GROUND_LOOKBACK_DAYS.
+            "past_days": GROUND_LOOKBACK_DAYS,
         }
     )
     raw = json.loads(http_get(url))
@@ -269,6 +273,97 @@ def fetch_openmeteo(lat: float, lon: float) -> dict:
         ]
 
     return {"models": out, "daylight": daylight}
+
+
+GROUND_LOOKBACK_DAYS = 3
+# Antecedent Precipitation Index style decay: yesterday counts fully, the day before at
+# 60%, three days back at 36% — a rough stand-in for how fast a well-drained course
+# actually dries out, not a measured drainage rate for any specific course.
+GROUND_DECAY = 0.6
+
+# (upper bound in mm of weighted accumulation, tier key, label, description) — thresholds
+# are a judgment call, not a published turf-management standard; there isn't one that maps
+# cleanly onto "will this course be muddy today."
+GROUND_TIERS = [
+    (5, "firm", "Firm", "Dry underfoot — little to no rain in the trailing 3 days."),
+    (15, "normal", "Normal", "Some recent rain, but not enough to noticeably soften the course."),
+    (
+        30,
+        "soft",
+        "Soft",
+        "Meaningful accumulation — expect mud on fairways and possible casual water in low spots.",
+    ),
+    (
+        float("inf"),
+        "saturated",
+        "Saturated",
+        "Heavy accumulation — standing water is likely; the course may go cart-path-only or delay/close.",
+    ),
+]
+
+
+def classify_ground(api_mm: float) -> tuple[str, str, str]:
+    for threshold, tier, label, desc in GROUND_TIERS:
+        if api_mm < threshold:
+            return tier, label, desc
+    return GROUND_TIERS[-1][1:]  # unreachable (last threshold is inf), kept for safety
+
+
+def compute_ground_conditions(openmeteo_points: dict[str, list[dict]]) -> dict[str, dict]:
+    """For each calendar day covered by openmeteo_points (which spans
+    now-GROUND_LOOKBACK_DAYS through now+forecast_days thanks to the past_days param),
+    compute a decay-weighted rainfall index from the 3 days immediately before it and
+    classify how that likely leaves the course playing.
+
+    For a day still ahead of "now", the trailing days may themselves be forecast rain
+    rather than observed rain — that's intentional: checking ground conditions for a
+    round two days out should already account for rain expected to fall between now and
+    then, not just what's happened so far.
+
+    Precip here is liquid-equivalent mm (rain+snow combined, same field Open-Meteo already
+    gives us for the hourly table) — a heavy snow day registers the same as an equivalent
+    rain day, which overstates softening in a hard freeze and understates it once snow
+    melts. No attempt is made to model that; it's a known simplification.
+    """
+    per_model_daily: dict[str, dict[str, float]] = {}
+    for key, points in openmeteo_points.items():
+        daily: dict[str, float] = {}
+        for p in points:
+            date_str = p["time"][:10]
+            mm = p.get("precip_mm") or 0
+            daily[date_str] = daily.get(date_str, 0) + mm
+        per_model_daily[key] = daily
+
+    all_dates = sorted({d for daily in per_model_daily.values() for d in daily})
+    daily_mm: dict[str, float] = {}
+    for d in all_dates:
+        vals = [daily[d] for daily in per_model_daily.values() if d in daily]
+        if vals:
+            daily_mm[d] = round(sum(vals) / len(vals), 1)
+
+    result: dict[str, dict] = {}
+    for d in all_dates:
+        target = datetime.strptime(d, "%Y-%m-%d")
+        breakdown = []
+        api_mm = 0.0
+        have_data = False
+        for days_ago in range(1, GROUND_LOOKBACK_DAYS + 1):
+            day_date = (target - timedelta(days=days_ago)).strftime("%Y-%m-%d")
+            mm = daily_mm.get(day_date)
+            weight = round(GROUND_DECAY ** (days_ago - 1), 2)
+            contribution = round(mm * weight, 1) if mm is not None else 0
+            if mm is not None:
+                have_data = True
+                api_mm += contribution
+            breakdown.append(
+                {"date": day_date, "days_ago": days_ago, "mm": mm, "weight": weight, "contribution": contribution}
+            )
+        if not have_data:
+            continue
+        api_mm = round(api_mm, 1)
+        tier, label, desc = classify_ground(api_mm)
+        result[d] = {"api_mm": api_mm, "tier": tier, "label": label, "description": desc, "breakdown": breakdown}
+    return result
 
 
 RELIABILITY_WINDOW_HOURS = 24
@@ -538,6 +633,11 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 reliability = None
 
+            try:
+                ground_conditions = compute_ground_conditions(openmeteo_points)
+            except Exception:
+                ground_conditions = {}
+
             hours = build_consensus(yrno_points, vedur_points, openmeteo_points)
 
             source_labels = ["yr.no"]
@@ -560,6 +660,7 @@ class Handler(BaseHTTPRequestHandler):
                     "hours": hours,
                     "reliability": reliability,
                     "daylight": daylight,
+                    "ground_conditions": ground_conditions,
                 }
             )
             return

@@ -118,10 +118,12 @@ async function loadForecast(name, stationId) {
 }
 
 let currentDaylight = [];
+let currentGroundConditions = {};
 
 function renderResult(data) {
-  const { location, hours, reliability, daylight } = data;
+  const { location, hours, reliability, daylight, ground_conditions } = data;
   currentDaylight = daylight || [];
+  currentGroundConditions = ground_conditions || {};
   locationNameEl.textContent = location.name;
   locationMetaEl.textContent = location.resolved_name;
   const labels = location.source_labels || ["yr.no"];
@@ -147,6 +149,15 @@ function renderResult(data) {
     const titleText = document.createElement("span");
     titleText.textContent = formatDayTitle(dayKey);
     title.appendChild(titleText);
+
+    const ground = currentGroundConditions[dayKey];
+    if (ground) {
+      const groundBadge = document.createElement("span");
+      groundBadge.className = `ground-badge ground-${ground.tier}`;
+      groundBadge.innerHTML = `${PUDDLE_ICON} ${ground.label}`;
+      title.appendChild(groundBadge);
+      attachHoverDetail(groundBadge, () => buildGroundHoverHtml(ground));
+    }
 
     const bestWindow = findBestWindow(dayHours, currentDaylight);
     if (bestWindow) {
@@ -298,7 +309,7 @@ function renderHourRow(h) {
     </td>
     <td>${
       golf
-        ? `<div class="golf-cell"><span class="golf-badge grade-${golf.tier}" title="Score ${golf.score}/100 — ${golf.notes.length ? golf.notes.join(", ") : "ideal conditions"}">${golf.label}</span>${golfFactorIcons(golf)}</div>`
+        ? `<div class="golf-cell"><span class="golf-badge grade-${golf.tier}">${golf.label}</span>${golfFactorIcons(golf)}</div>`
         : `<span class="no-source">—</span>`
     }</td>
     <td class="source-cell">${
@@ -324,7 +335,57 @@ function renderHourRow(h) {
         : `<span class="no-source">—</span>`
     }</td>
   `;
+
+  if (golf) {
+    const golfBadgeEl = tr.querySelector(".golf-badge");
+    if (golfBadgeEl) attachHoverDetail(golfBadgeEl, () => buildGolfHoverHtml(golf));
+  }
+
   return tr;
+}
+
+/**
+ * Full breakdown for the Golf badge's hover panel — the same score/notes/factors data
+ * that used to be squeezed into a single `title=` string, now as a readable list, one
+ * sentence per factor that actually moved the score.
+ */
+/**
+ * Day-by-day weighted rainfall breakdown for the Course Conditions badge — makes the
+ * "why is a sunny day marked Soft" case (the whole reason this badge exists) legible:
+ * each contributing day, how much fell, and how much that day still counts for today.
+ */
+function buildGroundHoverHtml(ground) {
+  const rows = ground.breakdown
+    .map((b) => {
+      const dayLabel = b.days_ago === 1 ? "Yesterday" : `${b.days_ago} days ago`;
+      const detail =
+        b.mm === null ? "no data" : `${b.mm}mm × ${b.weight.toFixed(2)} weight = ${b.contribution}mm`;
+      return `<li>${dayLabel}: ${detail}</li>`;
+    })
+    .join("");
+  return `
+    <div class="hover-title">${ground.label} — ${ground.api_mm}mm weighted 3-day total</div>
+    <p class="hover-desc">${ground.description}</p>
+    <ul class="hover-list">${rows}</ul>
+  `;
+}
+
+function buildGolfHoverHtml(golf) {
+  // The "Dark" case (outside daylight hours) short-circuits before factors are computed
+  // at all, so it only ever has `notes` — fall back to those, then to the "no source"
+  // deductions message rather than misreporting an unscored hour as ideal.
+  let rows;
+  if (golf.factors && golf.factors.length) {
+    rows = golf.factors.map((f) => `<li>${f.title}</li>`).join("");
+  } else if (golf.notes && golf.notes.length) {
+    rows = golf.notes.map((n) => `<li>${n}</li>`).join("");
+  } else {
+    rows = `<li class="muted">No deductions — conditions are within the ideal range.</li>`;
+  }
+  return `
+    <div class="hover-title">${golf.label} · ${golf.score}/100</div>
+    <ul class="hover-list">${rows}</ul>
+  `;
 }
 
 /**
@@ -566,3 +627,71 @@ function formatDayTitle(dayKey) {
   const d = new Date(`${dayKey}T00:00:00Z`);
   return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
 }
+
+/**
+ * Generic hover/focus detail panel — replaces plain `title=` tooltips (OS-styled, no
+ * markup, easy to miss) with a small floating panel we control. One panel element is
+ * reused/repositioned rather than created per-badge; `buildHtml` is called lazily on
+ * show so callers can pass a closure instead of computing content up front for every
+ * badge whether or not it's ever hovered.
+ */
+let hoverPanelEl = null;
+let hoverHideTimer = null;
+
+function attachHoverDetail(el, buildHtml) {
+  el.classList.add("has-hover-detail");
+  if (el.tabIndex < 0) el.tabIndex = 0;
+  const show = () => {
+    clearTimeout(hoverHideTimer);
+    showHoverPanel(el, buildHtml());
+  };
+  const hide = () => {
+    // Small delay so moving the mouse from the badge into the panel itself (e.g. to
+    // read a longer breakdown) doesn't immediately dismiss it.
+    hoverHideTimer = setTimeout(hideHoverPanel, 120);
+  };
+  el.addEventListener("mouseenter", show);
+  el.addEventListener("mouseleave", hide);
+  el.addEventListener("focus", show);
+  el.addEventListener("blur", hide);
+}
+
+function showHoverPanel(anchor, html) {
+  if (!hoverPanelEl) {
+    hoverPanelEl = document.createElement("div");
+    hoverPanelEl.className = "hover-panel";
+    hoverPanelEl.addEventListener("mouseenter", () => clearTimeout(hoverHideTimer));
+    hoverPanelEl.addEventListener("mouseleave", () => {
+      hoverHideTimer = setTimeout(hideHoverPanel, 120);
+    });
+    document.body.appendChild(hoverPanelEl);
+  }
+  hoverPanelEl.innerHTML = html;
+  hoverPanelEl.classList.add("visible");
+  positionHoverPanel(anchor, hoverPanelEl);
+}
+
+function hideHoverPanel() {
+  if (hoverPanelEl) hoverPanelEl.classList.remove("visible");
+}
+
+function positionHoverPanel(anchor, panel) {
+  const rect = anchor.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  const margin = 8;
+
+  let left = rect.left + window.scrollX;
+  const maxLeft = window.scrollX + document.documentElement.clientWidth - panelRect.width - margin;
+  left = Math.min(Math.max(left, window.scrollX + margin), Math.max(maxLeft, window.scrollX + margin));
+
+  let top = rect.bottom + window.scrollY + margin;
+  if (rect.bottom + panelRect.height + margin > window.innerHeight) {
+    top = rect.top + window.scrollY - panelRect.height - margin;
+  }
+
+  panel.style.left = `${left}px`;
+  panel.style.top = `${top}px`;
+}
+
+window.addEventListener("scroll", hideHoverPanel, true);
+window.addEventListener("resize", hideHoverPanel);

@@ -67,6 +67,13 @@ exports.handler = async (event) => {
     reliability = null;
   }
 
+  let groundConditions = {};
+  try {
+    groundConditions = computeGroundConditions(openmeteoPoints);
+  } catch (e) {
+    groundConditions = {};
+  }
+
   const hours = buildConsensus(yrnoPoints, vedurPoints, openmeteoPoints);
 
   const sourceLabels = ["yr.no"];
@@ -89,6 +96,7 @@ exports.handler = async (event) => {
     hours,
     reliability,
     daylight,
+    ground_conditions: groundConditions,
   });
 };
 
@@ -186,6 +194,10 @@ async function fetchOpenMeteo(lat, lon) {
     models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
     timezone: "UTC",
     forecast_days: "4",
+    // Extra trailing days aren't shown in the hourly table (buildConsensus still filters
+    // to now-1h.. onward for that), but they're what computeGroundConditions uses to know
+    // what actually fell before "now" — see GROUND_LOOKBACK_DAYS.
+    past_days: String(GROUND_LOOKBACK_DAYS),
   });
   const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -232,6 +244,102 @@ async function fetchOpenMeteo(lat, lon) {
       : [];
 
   return { models: out, daylight };
+}
+
+const GROUND_LOOKBACK_DAYS = 3;
+// Antecedent Precipitation Index style decay: yesterday counts fully, the day before at
+// 60%, three days back at 36% — a rough stand-in for how fast a well-drained course
+// actually dries out, not a measured drainage rate for any specific course.
+const GROUND_DECAY = 0.6;
+
+// [upper bound in mm of weighted accumulation, tier key, label, description] — thresholds
+// are a judgment call, not a published turf-management standard; there isn't one that maps
+// cleanly onto "will this course be muddy today."
+const GROUND_TIERS = [
+  [5, "firm", "Firm", "Dry underfoot — little to no rain in the trailing 3 days."],
+  [15, "normal", "Normal", "Some recent rain, but not enough to noticeably soften the course."],
+  [30, "soft", "Soft", "Meaningful accumulation — expect mud on fairways and possible casual water in low spots."],
+  [
+    Infinity,
+    "saturated",
+    "Saturated",
+    "Heavy accumulation — standing water is likely; the course may go cart-path-only or delay/close.",
+  ],
+];
+
+function classifyGround(apiMm) {
+  for (const [threshold, tier, label, desc] of GROUND_TIERS) {
+    if (apiMm < threshold) return { tier, label, desc };
+  }
+  const last = GROUND_TIERS[GROUND_TIERS.length - 1];
+  return { tier: last[1], label: last[2], desc: last[3] }; // unreachable (last threshold is Infinity)
+}
+
+/**
+ * For each calendar day covered by openmeteoPoints (which spans now-GROUND_LOOKBACK_DAYS
+ * through now+forecast_days thanks to the past_days param), compute a decay-weighted
+ * rainfall index from the 3 days immediately before it and classify how that likely
+ * leaves the course playing.
+ *
+ * For a day still ahead of "now", the trailing days may themselves be forecast rain
+ * rather than observed rain — that's intentional: checking ground conditions for a round
+ * two days out should already account for rain expected to fall between now and then, not
+ * just what's happened so far.
+ *
+ * Precip here is liquid-equivalent mm (rain+snow combined, same field already used for the
+ * hourly table) — a heavy snow day registers the same as an equivalent rain day, which
+ * overstates softening in a hard freeze and understates it once snow melts. No attempt is
+ * made to model that; it's a known simplification.
+ */
+function computeGroundConditions(openmeteoPoints) {
+  const perModelDaily = {};
+  for (const [key, points] of Object.entries(openmeteoPoints)) {
+    const daily = {};
+    for (const p of points) {
+      const dateStr = p.time.slice(0, 10);
+      const mm = p.precip_mm || 0;
+      daily[dateStr] = (daily[dateStr] || 0) + mm;
+    }
+    perModelDaily[key] = daily;
+  }
+
+  const allDatesSet = new Set();
+  for (const daily of Object.values(perModelDaily)) {
+    for (const d of Object.keys(daily)) allDatesSet.add(d);
+  }
+  const allDates = [...allDatesSet].sort();
+
+  const dailyMm = {};
+  for (const d of allDates) {
+    const vals = Object.values(perModelDaily)
+      .filter((daily) => d in daily)
+      .map((daily) => daily[d]);
+    if (vals.length) dailyMm[d] = round1(avg(vals));
+  }
+
+  const result = {};
+  for (const d of allDates) {
+    const target = new Date(`${d}T00:00:00Z`);
+    const breakdown = [];
+    let apiMm = 0;
+    let haveData = false;
+    for (let daysAgo = 1; daysAgo <= GROUND_LOOKBACK_DAYS; daysAgo++) {
+      const dayDate = new Date(target.getTime() - daysAgo * 86400000).toISOString().slice(0, 10);
+      const mm = dailyMm[dayDate] ?? null;
+      const weight = round2(Math.pow(GROUND_DECAY, daysAgo - 1));
+      const contribution = mm !== null ? round1(mm * weight) : 0;
+      if (mm !== null) {
+        haveData = true;
+        apiMm += contribution;
+      }
+      breakdown.push({ date: dayDate, days_ago: daysAgo, mm, weight, contribution });
+    }
+    if (!haveData) continue;
+    apiMm = round1(apiMm);
+    const { tier, label, desc } = classifyGround(apiMm);
+    result[d] = { api_mm: apiMm, tier, label, description: desc, breakdown };
+  }
+  return result;
 }
 
 const RELIABILITY_WINDOW_HOURS = 24;
