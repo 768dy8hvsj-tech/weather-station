@@ -11,6 +11,9 @@ const daysEl = document.getElementById("days");
 let debounceTimer = null;
 let activeIndex = -1;
 let currentSuggestions = [];
+// Bumped on every loadForecast call so a slow reliability response for a place the
+// user has since navigated away from can't clobber the panel for the current one.
+let requestSeq = 0;
 
 const initialParams = new URLSearchParams(window.location.search);
 const initialPlace = initialParams.get("place");
@@ -98,6 +101,7 @@ function selectSuggestion(s) {
 
 async function loadForecast(name, stationId) {
   if (!name) return;
+  const seq = ++requestSeq;
   resultEl.classList.add("hidden");
   statusEl.classList.remove("hidden", "error");
   statusEl.textContent = `Fetching forecasts for "${name}"…`;
@@ -111,17 +115,42 @@ async function loadForecast(name, stationId) {
     if (!res.ok) throw new Error(data.error || "Request failed");
     renderResult(data);
     statusEl.classList.add("hidden");
+    loadReliability(data.location.lat, data.location.lon, seq);
   } catch (err) {
     statusEl.textContent = `Could not load forecast: ${err.message}`;
     statusEl.classList.add("error");
   }
 }
 
+/**
+ * Fetched separately from the main forecast: Open-Meteo's Previous Runs API (which
+ * this needs) alone takes ~3.3s, versus ~0.9s for everything else the main table
+ * needs — blocking page render on it would erase most of the benefit of speeding up
+ * the rest. Renders a lightweight loading state immediately so the panel doesn't pop
+ * in from nothing once the slow request finally resolves.
+ */
+async function loadReliability(lat, lon, seq) {
+  renderReliabilityLoading();
+  try {
+    const res = await fetch(`/api/reliability?lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+    if (seq !== requestSeq) return; // user navigated to a different place meanwhile
+    renderReliability(res.ok ? data.reliability : null);
+  } catch (err) {
+    if (seq === requestSeq) renderReliability(null);
+  }
+}
+
+function renderReliabilityLoading() {
+  reliabilityEl.innerHTML = `<p class="reliability-summary">Checking forecast reliability…</p>`;
+  reliabilityEl.classList.remove("hidden");
+}
+
 let currentDaylight = [];
 let currentGroundConditions = {};
 
 function renderResult(data) {
-  const { location, hours, reliability, daylight, ground_conditions } = data;
+  const { location, hours, daylight, ground_conditions } = data;
   currentDaylight = daylight || [];
   currentGroundConditions = ground_conditions || {};
   locationNameEl.textContent = location.name;
@@ -130,7 +159,8 @@ function renderResult(data) {
   const noun = location.source_count === 1 ? "source" : "sources";
   sourceBadgeEl.textContent = `${location.source_count} ${noun}: ${labels.join(" + ")}`;
 
-  renderReliability(reliability);
+  reliabilityEl.classList.add("hidden");
+  reliabilityEl.innerHTML = "";
 
   const byDay = new Map();
   for (const h of hours) {

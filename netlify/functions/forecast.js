@@ -30,41 +30,34 @@ exports.handler = async (event) => {
 
   if (!name) return json({ error: "Missing 'name' query parameter" }, 400);
 
+  // geocode and vedur.is don't depend on each other (vedur.is is keyed by station id,
+  // not lat/lon) — start vedur.is immediately instead of waiting on geocoding first,
+  // then fetch yr.no/Open-Meteo together once geocoding resolves. Reliability is
+  // deliberately NOT fetched here: it alone takes ~3.3s (Open-Meteo's Previous Runs
+  // API is just slow), versus ~0.9s for everything else combined — blocking the whole
+  // page on it would erase most of the win from parallelizing. The frontend fetches
+  // /api/reliability separately after the main table renders.
+  const vedurPromise = stationId ? fetchVedur(stationId).catch(() => []) : Promise.resolve([]);
+
   const geo = (await geocode(name, true)) || (await geocode(name, false));
   if (!geo) return json({ error: `Could not locate '${name}'` }, 404);
 
   let yrnoPoints;
-  try {
-    yrnoPoints = await fetchYrno(geo.lat, geo.lon);
-  } catch (e) {
-    return json({ error: `MET Norway fetch failed: ${e.message}` }, 502);
-  }
-
-  let vedurPoints = [];
-  if (stationId) {
-    try {
-      vedurPoints = await fetchVedur(stationId);
-    } catch (e) {
-      vedurPoints = [];
-    }
-  }
-
   let openmeteoPoints = {};
   let daylight = [];
+  let vedurPoints = [];
   try {
-    const openmeteoResult = await fetchOpenMeteo(geo.lat, geo.lon);
+    const [yrnoResult, openmeteoResult, vedurResult] = await Promise.all([
+      fetchYrno(geo.lat, geo.lon),
+      fetchOpenMeteo(geo.lat, geo.lon).catch(() => ({ models: {}, daylight: [] })),
+      vedurPromise,
+    ]);
+    yrnoPoints = yrnoResult;
     openmeteoPoints = openmeteoResult.models;
     daylight = openmeteoResult.daylight;
+    vedurPoints = vedurResult;
   } catch (e) {
-    openmeteoPoints = {};
-    daylight = [];
-  }
-
-  let reliability = null;
-  try {
-    reliability = await fetchReliability(geo.lat, geo.lon);
-  } catch (e) {
-    reliability = null;
+    return json({ error: `MET Norway fetch failed: ${e.message}` }, 502);
   }
 
   let groundConditions = {};
@@ -94,7 +87,6 @@ exports.handler = async (event) => {
       source_labels: sourceLabels,
     },
     hours,
-    reliability,
     daylight,
     ground_conditions: groundConditions,
   });
@@ -340,86 +332,6 @@ function computeGroundConditions(openmeteoPoints) {
     result[d] = { api_mm: apiMm, tier, label, description: desc, breakdown };
   }
   return result;
-}
-
-const RELIABILITY_WINDOW_HOURS = 24;
-
-/**
- * 24h backtest of each Open-Meteo model's own short-range skill.
- *
- * Open-Meteo's Previous Runs API can return what a model predicted N days before
- * a given hour (temperature_2m_previous_day1 = predicted 24h ahead of that hour).
- * We don't have an independent observation history to compare against (vedur.is's
- * obs endpoint only exposes the latest reading, not a time series), so — per
- * Open-Meteo's own documented method — we compare each 24h-ahead prediction
- * against that same model's current/latest run for the same past hour
- * (temperature_2m), which reflects its most up-to-date analysis.
- */
-async function fetchReliability(lat, lon) {
-  const params = new URLSearchParams({
-    latitude: lat.toFixed(4),
-    longitude: lon.toFixed(4),
-    hourly: "temperature_2m,temperature_2m_previous_day1,wind_speed_10m,wind_speed_10m_previous_day1",
-    models: OPEN_METEO_MODELS.map(([modelId]) => modelId).join(","),
-    past_days: "2",
-    forecast_days: "1",
-    timezone: "UTC",
-  });
-  const res = await fetch(`https://previous-runs-api.open-meteo.com/v1/forecast?${params.toString()}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const raw = await res.json();
-  const hourly = raw.hourly || {};
-  const times = hourly.time || [];
-
-  const now = new Date();
-  now.setUTCMinutes(0, 0, 0);
-  const windowStart = now.getTime() - RELIABILITY_WINDOW_HOURS * 3600 * 1000;
-
-  const models = {};
-  const tempMaes = [];
-  for (const [modelId, key] of OPEN_METEO_MODELS) {
-    const actualTemp = hourly[`temperature_2m_${modelId}`];
-    const predTemp = hourly[`temperature_2m_previous_day1_${modelId}`];
-    const actualWind = hourly[`wind_speed_10m_${modelId}`];
-    const predWind = hourly[`wind_speed_10m_previous_day1_${modelId}`];
-    if (!actualTemp || !predTemp) continue;
-
-    const tempErrors = [];
-    const windErrors = [];
-    times.forEach((t, i) => {
-      const ts = Date.parse(`${t}:00Z`);
-      if (ts < windowStart || ts > now.getTime()) return;
-      if (actualTemp[i] !== null && actualTemp[i] !== undefined && predTemp[i] !== null && predTemp[i] !== undefined) {
-        tempErrors.push(Math.abs(actualTemp[i] - predTemp[i]));
-      }
-      if (
-        actualWind &&
-        predWind &&
-        actualWind[i] !== null &&
-        actualWind[i] !== undefined &&
-        predWind[i] !== null &&
-        predWind[i] !== undefined
-      ) {
-        windErrors.push(Math.abs(actualWind[i] - predWind[i]) / 3.6);
-      }
-    });
-
-    if (!tempErrors.length) continue;
-    models[key] = {
-      mae_temp_c: round2(avg(tempErrors)),
-      mae_wind_ms: windErrors.length ? round2(avg(windErrors)) : null,
-      sample_hours: tempErrors.length,
-    };
-    tempMaes.push(models[key].mae_temp_c);
-  }
-
-  if (!Object.keys(models).length) return null;
-
-  return {
-    window_hours: RELIABILITY_WINDOW_HOURS,
-    avg_mae_temp_c: round2(avg(tempMaes)),
-    models,
-  };
 }
 
 const round2 = (n) => Math.round(n * 100) / 100;

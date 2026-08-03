@@ -595,6 +595,20 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"stations": fetch_station_overview(hours_ahead), "hours_ahead": hours_ahead})
             return
 
+        if parsed.path == "/api/reliability":
+            try:
+                lat = float((qs.get("lat") or [None])[0])
+                lon = float((qs.get("lon") or [None])[0])
+            except (TypeError, ValueError):
+                self._error(400, "Missing or invalid 'lat'/'lon' query parameters")
+                return
+            try:
+                reliability = fetch_reliability(lat, lon)
+            except Exception:
+                reliability = None
+            self._json({"reliability": reliability})
+            return
+
         if parsed.path == "/api/forecast":
             name = (qs.get("name") or [""])[0].strip()
             station_id = (qs.get("station_id") or [None])[0]
@@ -602,36 +616,45 @@ class Handler(BaseHTTPRequestHandler):
                 self._error(400, "Missing 'name' query parameter")
                 return
 
-            geo = geocode(name, iceland_only=True) or geocode(name, iceland_only=False)
-            if geo is None:
-                self._error(404, f"Could not locate '{name}'")
-                return
+            # geocode and vedur.is don't depend on each other (vedur.is is keyed by
+            # station id, not lat/lon) — start vedur.is immediately instead of waiting
+            # on geocoding first, then fetch yr.no/Open-Meteo together once geocoding
+            # resolves. Reliability is deliberately NOT fetched here: it alone takes
+            # ~3.3s (Open-Meteo's Previous Runs API is just slow), versus ~0.9s for
+            # everything else combined — blocking the whole page on it would erase most
+            # of the win from parallelizing. The frontend fetches /api/reliability
+            # separately after the main table renders.
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                vedur_future = pool.submit(fetch_vedur, int(station_id)) if station_id else None
 
-            try:
-                yrno_points = fetch_yrno(geo["lat"], geo["lon"])
-            except Exception as e:
-                self._error(502, f"MET Norway fetch failed: {e}")
-                return
+                geo = geocode(name, iceland_only=True) or geocode(name, iceland_only=False)
+                if geo is None:
+                    self._error(404, f"Could not locate '{name}'")
+                    return
 
-            vedur_points = []
-            if station_id:
+                yrno_future = pool.submit(fetch_yrno, geo["lat"], geo["lon"])
+                openmeteo_future = pool.submit(fetch_openmeteo, geo["lat"], geo["lon"])
+
                 try:
-                    vedur_points = fetch_vedur(int(station_id))
+                    yrno_points = yrno_future.result()
+                except Exception as e:
+                    self._error(502, f"MET Norway fetch failed: {e}")
+                    return
+
+                vedur_points = []
+                if vedur_future:
+                    try:
+                        vedur_points = vedur_future.result()
+                    except Exception:
+                        vedur_points = []
+
+                try:
+                    openmeteo_result = openmeteo_future.result()
+                    openmeteo_points = openmeteo_result["models"]
+                    daylight = openmeteo_result["daylight"]
                 except Exception:
-                    vedur_points = []
-
-            try:
-                openmeteo_result = fetch_openmeteo(geo["lat"], geo["lon"])
-                openmeteo_points = openmeteo_result["models"]
-                daylight = openmeteo_result["daylight"]
-            except Exception:
-                openmeteo_points = {}
-                daylight = []
-
-            try:
-                reliability = fetch_reliability(geo["lat"], geo["lon"])
-            except Exception:
-                reliability = None
+                    openmeteo_points = {}
+                    daylight = []
 
             try:
                 ground_conditions = compute_ground_conditions(openmeteo_points)
@@ -658,7 +681,6 @@ class Handler(BaseHTTPRequestHandler):
                         "source_labels": source_labels,
                     },
                     "hours": hours,
-                    "reliability": reliability,
                     "daylight": daylight,
                     "ground_conditions": ground_conditions,
                 }
