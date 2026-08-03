@@ -11,10 +11,13 @@
     <header class="topbar">
       <div class="topbar-row">
         <div>
-          <h1>Iceland Stations</h1>
-          <p class="subtitle">Conditions at a glance, from the Icelandic Met Office's own network.</p>
+          <h1 id="page-title">Iceland Stations</h1>
+          <p id="page-subtitle" class="subtitle">Conditions at a glance, from the Icelandic Met Office's own network.</p>
         </div>
-        <a class="nav-link" href="/forecast.html">Detailed forecast →</a>
+        <div class="nav-links">
+          <a id="back-link" class="nav-link hidden" href="/">← All stations</a>
+          <a class="nav-link" href="/forecast.html">Detailed forecast →</a>
+        </div>
       </div>
       <p id="updated-at" class="updated-at"></p>
     </header>

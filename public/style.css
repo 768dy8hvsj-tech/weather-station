@@ -55,6 +55,12 @@ body {
   flex-wrap: wrap;
 }
 
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .nav-link {
   font-size: 13px;
   color: var(--accent);

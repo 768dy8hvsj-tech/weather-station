@@ -3,8 +3,31 @@ const statusEl = document.getElementById("status");
 const updatedEl = document.getElementById("updated-at");
 const sliderEl = document.getElementById("hours-slider");
 const sliderValueEl = document.getElementById("slider-value");
+const pageTitleEl = document.getElementById("page-title");
+const pageSubtitleEl = document.getElementById("page-subtitle");
+const backLinkEl = document.getElementById("back-link");
 
 const REFRESH_MS = 10 * 60 * 1000;
+
+// Same page/script serves both the home overview (all curated stations, grouped by
+// region) and a region drill-down (every vedur.is station in one region, flat) —
+// distinguished only by this query param, so region links are just "?region=X".
+const initialUrlParams = new URLSearchParams(window.location.search);
+const regionFilter = initialUrlParams.get("region");
+
+if (regionFilter) {
+  document.title = `${regionFilter} — Weather Consensus`;
+  pageTitleEl.textContent = regionFilter;
+  pageSubtitleEl.textContent = `All ${regionFilter} stations, from the Icelandic Met Office's own network.`;
+  backLinkEl.classList.remove("hidden");
+}
+
+// Region links carry the home page's current slider position (?hours=N) so drilling
+// into a region doesn't reset back to "Now".
+const initialHours = Number(initialUrlParams.get("hours"));
+if (Number.isFinite(initialHours) && initialHours >= 0 && initialHours <= 72) {
+  sliderEl.value = initialHours;
+}
 
 let hoursAhead = Number(sliderEl.value);
 let fetchDebounce = null;
@@ -37,7 +60,9 @@ function updateSliderLabel() {
 
 async function loadStations() {
   try {
-    const res = await fetch(`/api/stations?hours=${hoursAhead}`);
+    const params = new URLSearchParams({ hours: hoursAhead });
+    if (regionFilter) params.set("region", regionFilter);
+    const res = await fetch(`/api/stations?${params.toString()}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Request failed");
     render(data.stations);
@@ -50,29 +75,40 @@ async function loadStations() {
 }
 
 function render(stations) {
-  const byRegion = new Map();
-  for (const s of stations) {
-    if (!byRegion.has(s.region)) byRegion.set(s.region, []);
-    byRegion.get(s.region).push(s);
-  }
-
   gridEl.innerHTML = "";
-  for (const [region, list] of byRegion) {
-    const section = document.createElement("section");
-    section.className = "region-section";
 
-    const title = document.createElement("h2");
-    title.className = "region-title";
-    title.textContent = region;
-    section.appendChild(title);
-
+  if (regionFilter) {
+    // Already scoped to one region (the page heading says which) — a flat grid, no
+    // redundant region sub-headers.
     const grid = document.createElement("div");
     grid.className = "station-cards";
-    for (const s of list) {
-      grid.appendChild(renderCard(s));
+    for (const s of stations) grid.appendChild(renderCard(s));
+    gridEl.appendChild(grid);
+  } else {
+    const byRegion = new Map();
+    for (const s of stations) {
+      if (!byRegion.has(s.region)) byRegion.set(s.region, []);
+      byRegion.get(s.region).push(s);
     }
-    section.appendChild(grid);
-    gridEl.appendChild(section);
+
+    for (const [region, list] of byRegion) {
+      const section = document.createElement("section");
+      section.className = "region-section";
+
+      const title = document.createElement("h2");
+      title.className = "region-title";
+      const link = document.createElement("a");
+      link.href = `/?region=${encodeURIComponent(region)}&hours=${hoursAhead}`;
+      link.textContent = region;
+      title.appendChild(link);
+      section.appendChild(title);
+
+      const grid = document.createElement("div");
+      grid.className = "station-cards";
+      for (const s of list) grid.appendChild(renderCard(s));
+      section.appendChild(grid);
+      gridEl.appendChild(section);
+    }
   }
 
   const now = new Date();

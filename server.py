@@ -163,20 +163,24 @@ def fetch_vedur(station_id: int) -> list[dict]:
     return out
 
 
-def fetch_station_overview(hours_ahead: float = 1) -> list[dict]:
-    """Snapshot for every station in STATION_OVERVIEW at now + hours_ahead.
+def fetch_station_overview(hours_ahead: float = 1, stations: list[dict] | None = None) -> list[dict]:
+    """Snapshot for every station in `stations` (STATION_OVERVIEW's curated 28 by
+    default; pass all of VEDUR_STATIONS filtered to one region for the region drill-down
+    page) at now + hours_ahead.
 
     vedur.is's forecast API takes one station id per request (no batching — comma or
     repeated "ids" params silently only honor the first one), so covering a page full
     of stations means one request per station. Fetched concurrently with a thread pool
     since they're independent, I/O-bound calls; sequential would take ~15s+ for ~28
-    stations, threaded takes well under 2s.
+    stations, threaded takes well under 2s. The largest single region (Faxaflói, 42
+    stations) is still comfortably covered by the same thread pool.
 
     vedur.is's forecast resolution is hourly for roughly the first two days and 6-hourly
     beyond that, so the match window widens for distant targets rather than using one
     fixed tolerance — a target that lands between two 6-hourly points still needs to
     resolve to the nearer one instead of coming back empty.
     """
+    stations = stations if stations is not None else STATION_OVERVIEW
     target = datetime.now(timezone.utc) + timedelta(hours=hours_ahead)
     max_delta_minutes = 90 if hours_ahead <= 48 else 210
 
@@ -198,7 +202,7 @@ def fetch_station_overview(hours_ahead: float = 1) -> list[dict]:
         }
 
     with ThreadPoolExecutor(max_workers=16) as pool:
-        return list(pool.map(fetch_one, STATION_OVERVIEW))
+        return list(pool.map(fetch_one, stations))
 
 
 OPEN_METEO_MODELS = [("ecmwf_ifs025", "ecmwf"), ("gfs_seamless", "gfs"), ("icon_seamless", "icon")]
@@ -592,7 +596,17 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 hours_ahead = 1
             hours_ahead = max(0, min(72, hours_ahead))
-            self._json({"stations": fetch_station_overview(hours_ahead), "hours_ahead": hours_ahead})
+
+            region = (qs.get("region") or [None])[0]
+            stations = [s for s in VEDUR_STATIONS if s["region"] == region] if region else None
+
+            self._json(
+                {
+                    "stations": fetch_station_overview(hours_ahead, stations),
+                    "hours_ahead": hours_ahead,
+                    "region": region,
+                }
+            )
             return
 
         if parsed.path == "/api/reliability":

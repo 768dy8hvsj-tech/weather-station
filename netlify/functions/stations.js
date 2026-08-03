@@ -1,14 +1,17 @@
 const overview = require("../../station-overview.json");
+const allStations = require("../../vedur-stations.json");
 
 const USER_AGENT = "weather-consensus-app/1.0 (personal project; contact hakond@gmail.com)";
 
 /**
- * Snapshot for every station in station-overview.json at now + hoursAhead.
+ * Snapshot for every station in station-overview.json (or every station in one region,
+ * from vedur-stations.json, for the region drill-down page) at now + hoursAhead.
  *
  * vedur.is's forecast API takes one station id per request (no batching — comma or
  * repeated "ids" params silently only honor the first one), so covering a page full
  * of stations means one request per station. Fetched concurrently via Promise.all
- * since they're independent, I/O-bound calls.
+ * since they're independent, I/O-bound calls. The largest single region (Faxaflói,
+ * 42 stations) is still comfortably covered this way.
  *
  * vedur.is's forecast resolution is hourly for roughly the first two days and 6-hourly
  * beyond that, so the match window widens for distant targets rather than using one
@@ -21,10 +24,13 @@ exports.handler = async (event) => {
   if (Number.isNaN(hoursAhead)) hoursAhead = 1;
   hoursAhead = Math.max(0, Math.min(72, hoursAhead));
 
+  const region = params.region || null;
+  const stations = region ? allStations.filter((s) => s.region === region) : overview;
+
   const target = Date.now() + hoursAhead * 3600 * 1000;
   const maxDelta = hoursAhead <= 48 ? 90 : 210;
-  const results = await Promise.all(overview.map((station) => fetchOne(station, target, maxDelta)));
-  return json({ stations: results, hours_ahead: hoursAhead });
+  const results = await Promise.all(stations.map((station) => fetchOne(station, target, maxDelta)));
+  return json({ stations: results, hours_ahead: hoursAhead, region });
 };
 
 async function fetchOne(station, targetMs, maxDelta) {
