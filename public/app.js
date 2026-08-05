@@ -109,11 +109,13 @@ async function loadForecast(name, stationId) {
   const params = new URLSearchParams({ name });
   if (stationId) params.set("station_id", stationId);
 
+  const hasGolf = stationId ? GOLF_STATION_IDS.has(Number(stationId)) : false;
+
   try {
     const res = await fetch(`/api/forecast?${params.toString()}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Request failed");
-    renderResult(data);
+    renderResult(data, hasGolf);
     statusEl.classList.add("hidden");
     loadReliability(data.location.lat, data.location.lon, seq);
   } catch (err) {
@@ -148,11 +150,13 @@ function renderReliabilityLoading() {
 
 let currentDaylight = [];
 let currentGroundConditions = {};
+let currentHasGolf = false;
 
-function renderResult(data) {
+function renderResult(data, hasGolf) {
   const { location, hours, daylight, ground_conditions } = data;
   currentDaylight = daylight || [];
   currentGroundConditions = ground_conditions || {};
+  currentHasGolf = hasGolf;
   locationNameEl.textContent = location.name;
   locationMetaEl.textContent = location.resolved_name;
   const labels = location.source_labels || ["yr.no"];
@@ -180,7 +184,7 @@ function renderResult(data) {
     titleText.textContent = formatDayTitle(dayKey);
     title.appendChild(titleText);
 
-    const ground = currentGroundConditions[dayKey];
+    const ground = hasGolf ? currentGroundConditions[dayKey] : null;
     if (ground) {
       const groundBadge = document.createElement("span");
       groundBadge.className = `ground-badge ground-${ground.tier}`;
@@ -189,7 +193,7 @@ function renderResult(data) {
       attachHoverDetail(groundBadge, () => buildGroundHoverHtml(ground));
     }
 
-    const bestWindow = findBestWindow(dayHours, currentDaylight);
+    const bestWindow = hasGolf ? findBestWindow(dayHours, currentDaylight) : null;
     if (bestWindow) {
       const startHH = String(new Date(bestWindow.times[0]).getUTCHours()).padStart(2, "0");
       const endHH = String((new Date(bestWindow.times[bestWindow.times.length - 1]).getUTCHours() + 1) % 24).padStart(2, "0");
@@ -209,7 +213,7 @@ function renderResult(data) {
           <th>Consensus</th>
           <th>Wind</th>
           <th>Precip</th>
-          <th>Golf</th>
+          ${hasGolf ? "<th>Golf</th>" : ""}
           <th>yr.no</th>
           <th>vedur.is</th>
           <th>Open-Meteo</th>
@@ -312,7 +316,7 @@ function renderHourRow(h) {
   const precipIcon = precipIconCategory(h.consensus.precip);
   const dirDeg = h.consensus.wind_dir_deg;
   const dirCompass = h.consensus.wind_dir_compass;
-  const golf = golfScore(h.consensus, h.time, currentDaylight);
+  const golf = currentHasGolf ? golfScore(h.consensus, h.time, currentDaylight) : null;
 
   tr.innerHTML = `
     <td>${hh}:00</td>
@@ -337,11 +341,15 @@ function renderHourRow(h) {
     <td class="${precip.cls}">
       ${precipIcon ? `<span class="precip-icon icon-${precipIcon}">${WEATHER_ICONS[precipIcon]}</span>` : ""}${precip.text}
     </td>
-    <td>${
-      golf
-        ? `<div class="golf-cell"><span class="golf-badge grade-${golf.tier}">${golf.label}</span>${golfFactorIcons(golf)}</div>`
-        : `<span class="no-source">—</span>`
-    }</td>
+    ${
+      currentHasGolf
+        ? `<td>${
+            golf
+              ? `<div class="golf-cell"><span class="golf-badge grade-${golf.tier}">${golf.label}</span>${golfFactorIcons(golf)}</div>`
+              : `<span class="no-source">—</span>`
+          }</td>`
+        : ""
+    }
     <td class="source-cell">${
       yrno
         ? `<span class="val">${fmtTemp(yrno.temp_c)}</span> · ${fmtWind(yrno.wind_ms)}${
