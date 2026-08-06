@@ -100,7 +100,7 @@
   {
     "id": 31577,
     "name": "Blikdalsá",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.2664,
     "lon": -21.8329
   },
@@ -352,14 +352,14 @@
   {
     "id": 31475,
     "name": "Garðabær - Kauptún",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.0797,
     "lon": -21.9029
   },
   {
     "id": 1474,
     "name": "Garðabær Urriðaholt",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.0712,
     "lon": -21.9107
   },
@@ -380,7 +380,7 @@
   {
     "id": 1480,
     "name": "Geldinganes",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1678,
     "lon": -21.8038
   },
@@ -618,7 +618,7 @@
   {
     "id": 1481,
     "name": "Hólmsheiði",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1085,
     "lon": -21.6864
   },
@@ -772,7 +772,7 @@
   {
     "id": 31579,
     "name": "Kjalarnes",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.2106,
     "lon": -21.7667
   },
@@ -821,14 +821,14 @@
   {
     "id": 1479,
     "name": "Korpa",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1505,
     "lon": -21.7511
   },
   {
     "id": 1472,
     "name": "Kópavogur Fossvogsdalur",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1163,
     "lon": -21.8617
   },
@@ -933,7 +933,7 @@
   {
     "id": 31591,
     "name": "Mosfellsheiði",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.214,
     "lon": -21.3448
   },
@@ -1115,42 +1115,42 @@
   {
     "id": 1,
     "name": "Reykjavík",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1289,
     "lon": -21.9082
   },
   {
     "id": 1478,
     "name": "Reykjavík Geirsnef",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1281,
     "lon": -21.8409
   },
   {
     "id": 1470,
     "name": "Reykjavík Háahlíð",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1288,
     "lon": -21.9082
   },
   {
     "id": 1469,
     "name": "Reykjavík Hljómskálagarður",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1411,
     "lon": -21.9436
   },
   {
     "id": 1482,
     "name": "Reykjavík Víðidalur",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1035,
     "lon": -21.7971
   },
   {
     "id": 1477,
     "name": "Reykjavíkurflugvöllur",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1284,
     "lon": -21.9407
   },
@@ -1248,7 +1248,7 @@
   {
     "id": 1471,
     "name": "Seltjarnarnes Suðurnes",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.1545,
     "lon": -22.0325
   },
@@ -1339,7 +1339,7 @@
   {
     "id": 1578,
     "name": "Skrauthólar",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.2318,
     "lon": -21.8046
   },
@@ -1402,7 +1402,7 @@
   {
     "id": 1473,
     "name": "Straumsvík",
-    "region": "Faxaflói",
+    "region": "Höfuðborgarsvæðið",
     "lat": 64.0438,
     "lon": -22.0404
   },

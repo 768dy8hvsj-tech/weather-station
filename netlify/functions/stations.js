@@ -10,8 +10,8 @@ const USER_AGENT = "weather-consensus-app/1.0 (personal project; contact hakond@
  * vedur.is's forecast API takes one station id per request (no batching — comma or
  * repeated "ids" params silently only honor the first one), so covering a page full
  * of stations means one request per station. Fetched concurrently via Promise.all
- * since they're independent, I/O-bound calls. The largest single region (Faxaflói,
- * 42 stations) is still comfortably covered this way.
+ * since they're independent, I/O-bound calls. The largest single region (Norðurland
+ * eystra, 38 stations) is still comfortably covered this way.
  *
  * vedur.is's forecast resolution is hourly for roughly the first two days and 6-hourly
  * beyond that, so the match window widens for distant targets rather than using one

@@ -172,8 +172,8 @@ def fetch_station_overview(hours_ahead: float = 1, stations: list[dict] | None =
     repeated "ids" params silently only honor the first one), so covering a page full
     of stations means one request per station. Fetched concurrently with a thread pool
     since they're independent, I/O-bound calls; sequential would take ~15s+ for ~28
-    stations, threaded takes well under 2s. The largest single region (Faxaflói, 42
-    stations) is still comfortably covered by the same thread pool.
+    stations, threaded takes well under 2s. The largest single region (Norðurland eystra,
+    38 stations) is still comfortably covered by the same thread pool.
 
     vedur.is's forecast resolution is hourly for roughly the first two days and 6-hourly
     beyond that, so the match window widens for distant targets rather than using one
