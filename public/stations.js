@@ -143,9 +143,7 @@ function updateGolfFilterUI(golfCount) {
   golfFilterWrapEl.classList.remove("hidden");
   golfFilterToggleEl.setAttribute("aria-pressed", String(golfOnly));
   golfFilterToggleEl.classList.toggle("active", golfOnly);
-  golfFilterToggleEl.innerHTML = `${GOLF_FLAG_ICON} <span>${
-    golfOnly ? "Showing golf courses only" : `Golf courses only (${golfCount})`
-  }</span>`;
+  golfFilterToggleEl.innerHTML = `${GOLF_FLAG_ICON} <span>Golf Courses (${golfCount})</span>`;
 }
 
 function renderCard(s) {
@@ -155,12 +153,20 @@ function renderCard(s) {
 
   const category = conditionCategory(s.condition);
   const hh = s.time ? String(new Date(s.time).getUTCHours()).padStart(2, "0") + ":00" : "—";
+  const golfCourses = GOLF_STATION_COURSES[s.id];
 
   a.innerHTML = `
     <div class="station-icon icon-${category}">${WEATHER_ICONS[category] || WEATHER_ICONS.unknown}</div>
     <div class="station-info">
       <div class="station-name">${s.name}</div>
       <div class="station-condition">${s.condition || "—"} · ${hh}</div>
+      ${
+        golfCourses
+          ? `<div class="station-golf" title="${golfCourses.join("; ").replace(/"/g, "&quot;")}">${GOLF_FLAG_ICON}<span>${golfCourses
+              .map((c) => c.replace(/\s*\([^)]*\)$/, ""))
+              .join(", ")}</span></div>`
+          : ""
+      }
     </div>
     <div class="station-readout">
       <div class="station-temp">${fmtTemp(s.temp_c)}</div>

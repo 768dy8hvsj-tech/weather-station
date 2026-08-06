@@ -698,6 +698,31 @@ table.hours tr:last-child td { border-bottom: none; }
   text-overflow: ellipsis;
 }
 
+.station-golf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--good);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+.station-golf svg {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+}
+
+.station-golf span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .station-readout {
   text-align: right;
   flex-shrink: 0;
