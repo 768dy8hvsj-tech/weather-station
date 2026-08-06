@@ -364,13 +364,15 @@ body {
 }
 
 .chart-temp-area {
-  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+  /* fill is the temperature gradient, set inline (url(#temp-gradient)) so CSS doesn't
+     have to duplicate/override it — this just dims it down to a tint. */
   stroke: none;
+  fill-opacity: 0.16;
 }
 
 .chart-temp-line {
+  /* stroke is the temperature gradient, set inline for the same reason. */
   fill: none;
-  stroke: var(--accent);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;

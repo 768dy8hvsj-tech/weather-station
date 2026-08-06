@@ -23,6 +23,48 @@ function sizedIcon(iconSvg) {
 const WIND_ARROW_SIZED = sizedIcon(WIND_ARROW);
 const SKY_ICONS_SIZED = Object.fromEntries(Object.entries(WEATHER_ICONS).map(([k, v]) => [k, sizedIcon(v)]));
 
+/**
+ * Temperature color scale, calibrated to Iceland rather than a generic hot/cold split —
+ * "hot" here means genuinely rare: 2025 made news for Reykjavík's first 20°C+ day since
+ * 2023, and the city's all-time record is 24.3°C. Anchors are the temp at which each
+ * color is "pure"; values between anchors interpolate smoothly in HSL (hue/saturation/
+ * lightness), not RGB — RGB-lerping between, say, teal and orange cuts through the
+ * cube's interior and passes through a muddy olive brown at the midpoint, whereas
+ * rotating hue the short way around the wheel sweeps cleanly through green/yellow.
+ */
+const TEMP_COLOR_SCALE = [
+  { temp: -8, hsl: [224, 64, 33] }, // deep navy — well below freezing
+  { temp: 4, hsl: [221, 83, 53] }, // blue — typical cold Icelandic day
+  { temp: 11, hsl: [174, 84, 32] }, // teal — mild, an average decent day
+  { temp: 16.5, hsl: [38, 92, 50] }, // orange — warm, above-average
+  { temp: 24, hsl: [0, 71, 51] }, // red — rare heat
+];
+
+function lerpHue(h1, h2, t) {
+  let diff = h2 - h1;
+  if (diff > 180) diff -= 360;
+  if (diff < -180) diff += 360;
+  return (((h1 + diff * t) % 360) + 360) % 360;
+}
+
+function tempColorCss(tempC) {
+  const scale = TEMP_COLOR_SCALE;
+  const clamped = Math.min(scale[scale.length - 1].temp, Math.max(scale[0].temp, tempC));
+  for (let i = 0; i < scale.length - 1; i++) {
+    const a = scale[i];
+    const b = scale[i + 1];
+    if (clamped >= a.temp && clamped <= b.temp) {
+      const t = (clamped - a.temp) / (b.temp - a.temp);
+      const h = lerpHue(a.hsl[0], b.hsl[0], t);
+      const s = a.hsl[1] + (b.hsl[1] - a.hsl[1]) * t;
+      const l = a.hsl[2] + (b.hsl[2] - a.hsl[2]) * t;
+      return `hsl(${h.toFixed(1)},${s.toFixed(1)}%,${l.toFixed(1)}%)`;
+    }
+  }
+  const last = scale[scale.length - 1];
+  return `hsl(${last.hsl[0]},${last.hsl[1]}%,${last.hsl[2]}%)`;
+}
+
 function renderForecastChart(containerId, hours, opts) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -69,13 +111,25 @@ function renderForecastChart(containerId, hours, opts) {
   const linePoints = [];
   hours.forEach((h, i) => {
     if (h.consensus.temp_c === null || h.consensus.temp_c === undefined) return;
-    linePoints.push([xScale(times[i]), yScale(h.consensus.temp_c)]);
+    linePoints.push([xScale(times[i]), yScale(h.consensus.temp_c), h.consensus.temp_c]);
   });
   const linePath = linePoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
   const areaPath = linePoints.length
     ? `${linePath} L ${linePoints[linePoints.length - 1][0].toFixed(1)} ${plotBottom.toFixed(1)} ` +
       `L ${linePoints[0][0].toFixed(1)} ${plotBottom.toFixed(1)} Z`
     : "";
+
+  // One horizontal gradient, positioned in plot coordinates so its stops line up with
+  // the line's actual x-positions, reused for both the line's stroke (full strength)
+  // and the area's fill (dimmed via CSS fill-opacity) so they always match.
+  const tempGradientStops = linePoints
+    .map(([x, , tempC]) => `<stop offset="${(((x - plotLeft) / plotWidth) * 100).toFixed(1)}%" stop-color="${tempColorCss(tempC)}" />`)
+    .join("");
+  const tempGradient = `
+    <linearGradient id="temp-gradient" gradientUnits="userSpaceOnUse" x1="${plotLeft}" y1="0" x2="${plotRight}" y2="0">
+      ${tempGradientStops}
+    </linearGradient>
+  `;
 
   const bestBands = [...bestWindowsByDay.values()]
     .filter(Boolean)
@@ -156,6 +210,15 @@ function renderForecastChart(containerId, hours, opts) {
     .map((v) => `<text class="chart-axis-label" x="${(plotLeft - 6).toFixed(1)}" y="${(yScale(v) + 3).toFixed(1)}" text-anchor="end">${Math.round(v)}°</text>`)
     .join("");
 
+  // A scale for the precip lane so the bars read as an actual measurement (mm) rather
+  // than unlabeled shapes — top tick is the lane's max, bottom is the implicit 0 baseline
+  // the bars grow up from.
+  const precipMaxLabel = precipMax >= 10 ? `${Math.round(precipMax)}` : precipMax.toFixed(1);
+  const precipAxisLabels = `
+    <text class="chart-axis-label" x="${(plotLeft - 6).toFixed(1)}" y="${(precipTop + 4).toFixed(1)}" text-anchor="end">${precipMaxLabel}mm</text>
+    <text class="chart-axis-label" x="${(plotLeft - 6).toFixed(1)}" y="${(precipTop + precipLaneUsable + 4).toFixed(1)}" text-anchor="end">0mm</text>
+  `;
+
   const hoverDots = hours
     .map((h, i) => {
       if (h.consensus.temp_c === null || h.consensus.temp_c === undefined) return "";
@@ -167,14 +230,16 @@ function renderForecastChart(containerId, hours, opts) {
 
   el.innerHTML = `
     <svg viewBox="0 0 ${CHART_VIEW_WIDTH} ${CHART_HEIGHT}" class="forecast-chart-svg" preserveAspectRatio="none">
+      <defs>${tempGradient}</defs>
       ${bestBands}
       ${dayGridlines}
-      <path class="chart-temp-area" d="${areaPath}"></path>
-      <path class="chart-temp-line" d="${linePath}"></path>
+      <path class="chart-temp-area" d="${areaPath}" fill="url(#temp-gradient)"></path>
+      <path class="chart-temp-line" d="${linePath}" stroke="url(#temp-gradient)"></path>
       ${precipBars}
       <g class="chart-wind-lane">${windArrows}</g>
       ${skyIcons}
       ${tempAxisLabels}
+      ${precipAxisLabels}
       ${dayLabels}
       ${hoverDots}
     </svg>
