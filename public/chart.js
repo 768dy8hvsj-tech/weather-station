@@ -1,22 +1,27 @@
 /**
  * Hand-rolled SVG chart spanning the whole visible forecast (all days at once, not
- * per-day like the tables below it) — a temperature line, wind direction/force arrows,
- * precipitation bars, and shaded best-golf-window bands all sharing one timeline.
- * Reuses app.js's hover-panel machinery (same page, same script scope) and icons.js's
- * WIND_ARROW so the chart looks and behaves like the rest of the app rather than a
- * bolted-on library widget.
+ * per-day like the tables below it) — a temperature line, sky-condition icons, wind
+ * direction/force arrows, precipitation bars, and shaded best-golf-window bands all
+ * sharing one timeline. Reuses app.js's hover-panel machinery (same page, same script
+ * scope) and icons.js's icon set so the chart looks and behaves like the rest of the
+ * app rather than a bolted-on library widget.
  */
 const CHART_VIEW_WIDTH = 900;
-const CHART_HEIGHT = 220;
-const CHART_MARGIN = { top: 6, right: 12, bottom: 22, left: 34 };
-const CHART_WIND_LANE = 22;
+const CHART_HEIGHT = 240;
+const CHART_MARGIN = { top: 4, right: 12, bottom: 22, left: 34 };
+const CHART_SKY_LANE = 24;
+const CHART_WIND_LANE = 20;
 const CHART_PRECIP_LANE = 30;
 
-// WIND_ARROW is a full `<svg viewBox="0 0 24 24">` with no explicit width/height (fine
-// as a block-level icon, where CSS sizes it) — nested raw inside another SVG's <g> it
-// has no intrinsic size to fall back to and balloons to fill the parent viewport, so
-// give it one explicitly before embedding.
-const WIND_ARROW_SIZED = WIND_ARROW.replace("<svg ", '<svg width="24" height="24" ');
+// WEATHER_ICONS/WIND_ARROW entries are full `<svg viewBox="0 0 24 24">` elements with no
+// explicit width/height (fine as block-level icons, where CSS sizes them) — nested raw
+// inside another SVG's <g> they have no intrinsic size to fall back to and balloon to
+// fill the parent viewport, so give each an explicit size before embedding here.
+function sizedIcon(iconSvg) {
+  return iconSvg.replace("<svg ", '<svg width="24" height="24" ');
+}
+const WIND_ARROW_SIZED = sizedIcon(WIND_ARROW);
+const SKY_ICONS_SIZED = Object.fromEntries(Object.entries(WEATHER_ICONS).map(([k, v]) => [k, sizedIcon(v)]));
 
 function renderForecastChart(containerId, hours, opts) {
   const el = document.getElementById(containerId);
@@ -32,7 +37,7 @@ function renderForecastChart(containerId, hours, opts) {
 
   const { daylight = [], bestWindowsByDay = new Map(), hasGolf = false } = opts || {};
 
-  const plotTop = CHART_MARGIN.top + CHART_WIND_LANE;
+  const plotTop = CHART_MARGIN.top + CHART_SKY_LANE + CHART_WIND_LANE;
   const plotBottom = CHART_HEIGHT - CHART_MARGIN.bottom - CHART_PRECIP_LANE;
   const plotHeight = plotBottom - plotTop;
   const plotLeft = CHART_MARGIN.left;
@@ -100,10 +105,11 @@ function renderForecastChart(containerId, hours, opts) {
     })
     .join("");
 
-  const windEvery = Math.max(1, Math.round(hours.length / 18));
+  const iconEvery = Math.max(1, Math.round(hours.length / 14));
+  const windY = CHART_MARGIN.top + CHART_SKY_LANE + CHART_WIND_LANE / 2;
   const windArrows = hours
     .map((h, i) => {
-      if (i % windEvery !== 0) return "";
+      if (i % iconEvery !== 0) return "";
       const ms = h.consensus.wind_ms;
       if (ms === null || ms === undefined) return "";
       const dir = h.consensus.wind_dir_deg;
@@ -111,7 +117,20 @@ function renderForecastChart(containerId, hours, opts) {
       const opacity = b ? (0.3 + (b.force / 12) * 0.7).toFixed(2) : "0.4";
       const x = xScale(times[i]);
       const rotate = dir !== null && dir !== undefined ? (dir + 180) % 360 : 0;
-      return `<g transform="translate(${x.toFixed(1)},${(CHART_MARGIN.top + CHART_WIND_LANE / 2).toFixed(1)}) rotate(${rotate})" opacity="${opacity}"><g transform="translate(-6,-6) scale(0.5)">${WIND_ARROW_SIZED}</g></g>`;
+      return `<g transform="translate(${x.toFixed(1)},${windY.toFixed(1)}) rotate(${rotate})" opacity="${opacity}"><g transform="translate(-6,-6) scale(0.5)">${WIND_ARROW_SIZED}</g></g>`;
+    })
+    .join("");
+
+  const skyY = CHART_MARGIN.top + CHART_SKY_LANE / 2;
+  const skyIcons = hours
+    .map((h, i) => {
+      if (i % iconEvery !== 0) return "";
+      const c = h.consensus;
+      if (c.cloud_cover_pct === null || c.cloud_cover_pct === undefined) return "";
+      const category = skyCategory({ cloudCoverPct: c.cloud_cover_pct, precipType: c.precip && c.precip.type });
+      const icon = SKY_ICONS_SIZED[category] || SKY_ICONS_SIZED.unknown;
+      const x = xScale(times[i]);
+      return `<g class="chart-sky-icon icon-${category}" transform="translate(${x.toFixed(1)},${skyY.toFixed(1)})"><g transform="translate(-8,-8) scale(0.67)">${icon}</g></g>`;
     })
     .join("");
 
@@ -154,6 +173,7 @@ function renderForecastChart(containerId, hours, opts) {
       <path class="chart-temp-line" d="${linePath}"></path>
       ${precipBars}
       <g class="chart-wind-lane">${windArrows}</g>
+      ${skyIcons}
       ${tempAxisLabels}
       ${dayLabels}
       ${hoverDots}
@@ -182,8 +202,16 @@ function buildChartHoverHtml(h, { daylight, hasGolf }) {
   });
   const precip = fmtPrecip(h.consensus.precip);
   const golf = hasGolf ? golfScore(h.consensus, h.time, daylight) : null;
+  const c = h.consensus;
+  const skyLabel =
+    c.cloud_cover_pct === null || c.cloud_cover_pct === undefined
+      ? null
+      : skyCategory({ cloudCoverPct: c.cloud_cover_pct, precipType: c.precip && c.precip.type })
+          .replace("-", " ")
+          .replace(/^./, (ch) => ch.toUpperCase());
   const rows = [
     `${fmtTemp(h.consensus.temp_c)} · ${fmtWind(h.consensus.wind_ms)}${h.consensus.wind_dir_compass ? " " + h.consensus.wind_dir_compass : ""}`,
+    ...(skyLabel ? [skyLabel] : []),
     precip.text !== "—" ? precip.text : "No precipitation",
   ];
   if (golf) rows.push(`Golf: ${golf.label} (${golf.score}/100)`);

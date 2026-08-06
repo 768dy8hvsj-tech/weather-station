@@ -354,9 +354,13 @@ body {
 
 .forecast-chart-svg {
   width: 100%;
-  height: 220px;
+  height: 240px;
   display: block;
   overflow: visible;
+}
+
+.chart-sky-icon {
+  opacity: 0.85;
 }
 
 .chart-temp-area {

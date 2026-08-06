@@ -7,6 +7,48 @@
     "lon": -21.9082
   },
   {
+    "id": 1472,
+    "name": "Kópavogur Fossvogsdalur",
+    "region": "Höfuðborgarsvæðið",
+    "lat": 64.1163,
+    "lon": -21.8617
+  },
+  {
+    "id": 1473,
+    "name": "Straumsvík",
+    "region": "Höfuðborgarsvæðið",
+    "lat": 64.0438,
+    "lon": -22.0404
+  },
+  {
+    "id": 1471,
+    "name": "Seltjarnarnes Suðurnes",
+    "region": "Höfuðborgarsvæðið",
+    "lat": 64.1545,
+    "lon": -22.0325
+  },
+  {
+    "id": 31475,
+    "name": "Garðabær - Kauptún",
+    "region": "Höfuðborgarsvæðið",
+    "lat": 64.0797,
+    "lon": -21.9029
+  },
+  {
+    "id": 31591,
+    "name": "Mosfellsheiði",
+    "region": "Höfuðborgarsvæðið",
+    "lat": 64.214,
+    "lon": -21.3448
+  },
+  {
+    "id": 31579,
+    "name": "Kjalarnes",
+    "region": "Höfuðborgarsvæðið",
+    "lat": 64.2106,
+    "lon": -21.7667
+  },
+  {
     "id": 990,
     "name": "Keflavíkurflugvöllur",
     "region": "Faxaflói",
@@ -19,6 +61,20 @@
     "region": "Faxaflói",
     "lat": 64.699,
     "lon": -20.869
+  },
+  {
+    "id": 31572,
+    "name": "Akrafjall",
+    "region": "Faxaflói",
+    "lat": 64.3105,
+    "lon": -21.966
+  },
+  {
+    "id": 31363,
+    "name": "Reykjanesbraut",
+    "region": "Faxaflói",
+    "lat": 64.0027,
+    "lon": -22.2296
   },
   {
     "id": 178,
