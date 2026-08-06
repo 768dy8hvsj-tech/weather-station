@@ -93,6 +93,40 @@ body {
   margin-bottom: 24px;
 }
 
+.golf-filter-wrap {
+  margin-bottom: 16px;
+}
+
+.golf-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.golf-filter-toggle:hover {
+  border-color: var(--good);
+}
+
+.golf-filter-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.golf-filter-toggle.active {
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 15%, transparent);
+  border-color: transparent;
+}
+
 .slider-header {
   display: flex;
   align-items: baseline;

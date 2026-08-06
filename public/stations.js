@@ -6,6 +6,8 @@ const sliderValueEl = document.getElementById("slider-value");
 const pageTitleEl = document.getElementById("page-title");
 const pageSubtitleEl = document.getElementById("page-subtitle");
 const backLinkEl = document.getElementById("back-link");
+const golfFilterWrapEl = document.getElementById("golf-filter-wrap");
+const golfFilterToggleEl = document.getElementById("golf-filter-toggle");
 
 const REFRESH_MS = 10 * 60 * 1000;
 
@@ -31,6 +33,20 @@ if (Number.isFinite(initialHours) && initialHours >= 0 && initialHours <= 72) {
 
 let hoursAhead = Number(sliderEl.value);
 let fetchDebounce = null;
+
+// Region-only filter for stations near a real golf course (see golf-stations.js). Kept
+// client-side over the already-fetched station list — toggling it never needs a refetch.
+let golfOnly = initialUrlParams.get("golf") === "1";
+let lastStations = [];
+
+golfFilterToggleEl.addEventListener("click", () => {
+  golfOnly = !golfOnly;
+  const url = new URL(window.location.href);
+  if (golfOnly) url.searchParams.set("golf", "1");
+  else url.searchParams.delete("golf");
+  history.replaceState(null, "", url);
+  render(lastStations);
+});
 
 updateSliderLabel();
 loadStations();
@@ -75,14 +91,18 @@ async function loadStations() {
 }
 
 function render(stations) {
+  lastStations = stations;
   gridEl.innerHTML = "";
 
   if (regionFilter) {
+    const golfStations = stations.filter((s) => GOLF_STATION_IDS.has(s.id));
+    updateGolfFilterUI(golfStations.length);
+
     // Already scoped to one region (the page heading says which) — a flat grid, no
     // redundant region sub-headers.
     const grid = document.createElement("div");
     grid.className = "station-cards";
-    for (const s of stations) grid.appendChild(renderCard(s));
+    for (const s of golfOnly ? golfStations : stations) grid.appendChild(renderCard(s));
     gridEl.appendChild(grid);
   } else {
     const byRegion = new Map();
@@ -113,6 +133,19 @@ function render(stations) {
 
   const now = new Date();
   updatedEl.textContent = `Updated ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC`;
+}
+
+function updateGolfFilterUI(golfCount) {
+  if (golfCount === 0) {
+    golfFilterWrapEl.classList.add("hidden");
+    return;
+  }
+  golfFilterWrapEl.classList.remove("hidden");
+  golfFilterToggleEl.setAttribute("aria-pressed", String(golfOnly));
+  golfFilterToggleEl.classList.toggle("active", golfOnly);
+  golfFilterToggleEl.innerHTML = `${GOLF_FLAG_ICON} <span>${
+    golfOnly ? "Showing golf courses only" : `Golf courses only (${golfCount})`
+  }</span>`;
 }
 
 function renderCard(s) {
