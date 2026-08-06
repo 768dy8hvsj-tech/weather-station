@@ -41,6 +41,8 @@ async function fetchOne(station, targetMs, maxDelta) {
       id: station.id,
       name: station.name,
       region: station.region,
+      lat: station.lat ?? null,
+      lon: station.lon ?? null,
       time: hit?.time ?? null,
       temp_c: hit?.temp_c ?? null,
       wind_ms: hit?.wind_ms ?? null,

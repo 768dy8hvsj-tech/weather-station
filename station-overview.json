@@ -1,30 +1,198 @@
 [
-  { "id": 1, "name": "Reykjavík", "region": "Faxaflói" },
-  { "id": 990, "name": "Keflavíkurflugvöllur", "region": "Faxaflói" },
-  { "id": 6802, "name": "Húsafell", "region": "Faxaflói" },
-  { "id": 178, "name": "Stykkishólmur", "region": "Breiðafjörður" },
-  { "id": 2319, "name": "Patreksfjörður", "region": "Breiðafjörður" },
-  { "id": 2428, "name": "Bíldudalur", "region": "Vestfirðir" },
-  { "id": 2644, "name": "Ísafjörður Tungudalur", "region": "Vestfirðir" },
-  { "id": 2738, "name": "Bolungarvík", "region": "Vestfirðir" },
-  { "id": 2481, "name": "Hólmavík", "region": "Strandir og Norðurland vestra" },
-  { "id": 3317, "name": "Blönduós", "region": "Strandir og Norðurland vestra" },
-  { "id": 3433, "name": "Sauðárkrókur flugvöllur", "region": "Strandir og Norðurland vestra" },
-  { "id": 3752, "name": "Siglufjörður", "region": "Strandir og Norðurland vestra" },
-  { "id": 3471, "name": "Akureyri - Krossanesbraut", "region": "Norðurland eystra" },
-  { "id": 3696, "name": "Húsavík", "region": "Norðurland eystra" },
-  { "id": 4300, "name": "Mývatn", "region": "Norðurland eystra" },
-  { "id": 4614, "name": "Ásbyrgi", "region": "Norðurland eystra" },
-  { "id": 571, "name": "Egilsstaðaflugvöllur", "region": "Austurland að Glettingi" },
-  { "id": 5990, "name": "Neskaupstaður", "region": "Austfirðir" },
-  { "id": 5982, "name": "Fáskrúðsfjörður Ljósaland", "region": "Austfirðir" },
-  { "id": 5544, "name": "Höfn í Hornafirði", "region": "Suðausturland" },
-  { "id": 6499, "name": "Skaftafell", "region": "Suðausturland" },
-  { "id": 6272, "name": "Kirkjubæjarklaustur Stjórnarsandur", "region": "Suðausturland" },
-  { "id": 6017, "name": "Stórhöfði", "region": "Suðurland" },
-  { "id": 6300, "name": "Selfoss", "region": "Suðurland" },
-  { "id": 36519, "name": "Gullfoss", "region": "Suðurland" },
-  { "id": 1596, "name": "Þingvellir", "region": "Suðurland" },
-  { "id": 1361, "name": "Grindavík", "region": "Suðurland" },
-  { "id": 6935, "name": "Hveravellir", "region": "Miðhálendið" }
+  {
+    "id": 1,
+    "name": "Reykjavík",
+    "region": "Faxaflói",
+    "lat": 64.1289,
+    "lon": -21.9082
+  },
+  {
+    "id": 990,
+    "name": "Keflavíkurflugvöllur",
+    "region": "Faxaflói",
+    "lat": 63.9802,
+    "lon": -22.5953
+  },
+  {
+    "id": 6802,
+    "name": "Húsafell",
+    "region": "Faxaflói",
+    "lat": 64.699,
+    "lon": -20.869
+  },
+  {
+    "id": 178,
+    "name": "Stykkishólmur",
+    "region": "Breiðafjörður",
+    "lat": 65.074,
+    "lon": -22.7339
+  },
+  {
+    "id": 2319,
+    "name": "Patreksfjörður",
+    "region": "Breiðafjörður",
+    "lat": 65.5951,
+    "lon": -23.9748
+  },
+  {
+    "id": 2428,
+    "name": "Bíldudalur",
+    "region": "Vestfirðir",
+    "lat": 65.6794,
+    "lon": -23.6122
+  },
+  {
+    "id": 2644,
+    "name": "Ísafjörður Tungudalur",
+    "region": "Vestfirðir",
+    "lat": 66.06,
+    "lon": -23.1847
+  },
+  {
+    "id": 2738,
+    "name": "Bolungarvík",
+    "region": "Vestfirðir",
+    "lat": 66.161,
+    "lon": -23.2538
+  },
+  {
+    "id": 2481,
+    "name": "Hólmavík",
+    "region": "Strandir og Norðurland vestra",
+    "lat": 65.6873,
+    "lon": -21.6813
+  },
+  {
+    "id": 3317,
+    "name": "Blönduós",
+    "region": "Strandir og Norðurland vestra",
+    "lat": 65.658,
+    "lon": -20.2925
+  },
+  {
+    "id": 3433,
+    "name": "Sauðárkrókur flugvöllur",
+    "region": "Strandir og Norðurland vestra",
+    "lat": 65.7259,
+    "lon": -19.5737
+  },
+  {
+    "id": 3752,
+    "name": "Siglufjörður",
+    "region": "Strandir og Norðurland vestra",
+    "lat": 66.1349,
+    "lon": -18.919
+  },
+  {
+    "id": 3471,
+    "name": "Akureyri - Krossanesbraut",
+    "region": "Norðurland eystra",
+    "lat": 65.6961,
+    "lon": -18.1113
+  },
+  {
+    "id": 3696,
+    "name": "Húsavík",
+    "region": "Norðurland eystra",
+    "lat": 66.0418,
+    "lon": -17.3281
+  },
+  {
+    "id": 4300,
+    "name": "Mývatn",
+    "region": "Norðurland eystra",
+    "lat": 65.6193,
+    "lon": -16.9768
+  },
+  {
+    "id": 4614,
+    "name": "Ásbyrgi",
+    "region": "Norðurland eystra",
+    "lat": 66.03,
+    "lon": -16.4833
+  },
+  {
+    "id": 571,
+    "name": "Egilsstaðaflugvöllur",
+    "region": "Austurland að Glettingi",
+    "lat": 65.283,
+    "lon": -14.4025
+  },
+  {
+    "id": 5990,
+    "name": "Neskaupstaður",
+    "region": "Austfirðir",
+    "lat": 65.1501,
+    "lon": -13.6706
+  },
+  {
+    "id": 5982,
+    "name": "Fáskrúðsfjörður Ljósaland",
+    "region": "Austfirðir",
+    "lat": 64.9372,
+    "lon": -14.0407
+  },
+  {
+    "id": 5544,
+    "name": "Höfn í Hornafirði",
+    "region": "Suðausturland",
+    "lat": 64.2691,
+    "lon": -15.2135
+  },
+  {
+    "id": 6499,
+    "name": "Skaftafell",
+    "region": "Suðausturland",
+    "lat": 64.0144,
+    "lon": -16.9721
+  },
+  {
+    "id": 6272,
+    "name": "Kirkjubæjarklaustur Stjórnarsandur",
+    "region": "Suðausturland",
+    "lat": 63.793,
+    "lon": -18.0119
+  },
+  {
+    "id": 6017,
+    "name": "Stórhöfði",
+    "region": "Suðurland",
+    "lat": 63.3996,
+    "lon": -20.2882
+  },
+  {
+    "id": 6300,
+    "name": "Selfoss",
+    "region": "Suðurland",
+    "lat": 63.9355,
+    "lon": -20.9707
+  },
+  {
+    "id": 36519,
+    "name": "Gullfoss",
+    "region": "Suðurland",
+    "lat": 64.3077,
+    "lon": -20.2119
+  },
+  {
+    "id": 1596,
+    "name": "Þingvellir",
+    "region": "Suðurland",
+    "lat": 64.2807,
+    "lon": -21.0875
+  },
+  {
+    "id": 1361,
+    "name": "Grindavík",
+    "region": "Suðurland",
+    "lat": 63.8438,
+    "lon": -22.417
+  },
+  {
+    "id": 6935,
+    "name": "Hveravellir",
+    "region": "Miðhálendið",
+    "lat": 64.8668,
+    "lon": -19.5622
+  }
 ]

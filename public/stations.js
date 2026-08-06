@@ -39,6 +39,15 @@ let fetchDebounce = null;
 let golfOnly = initialUrlParams.get("golf") === "1";
 let lastStations = [];
 
+// Map is created once and reused across refreshes/toggles so pan/zoom survives them —
+// only the region view's first population fits the view to that region's stations.
+let mapReadyPromise = null;
+let mapFitted = false;
+function ensureMap() {
+  if (!mapReadyPromise) mapReadyPromise = initStationMap("station-map");
+  return mapReadyPromise;
+}
+
 golfFilterToggleEl.addEventListener("click", () => {
   golfOnly = !golfOnly;
   const url = new URL(window.location.href);
@@ -98,13 +107,21 @@ function render(stations) {
     const golfStations = stations.filter((s) => GOLF_STATION_IDS.has(s.id));
     updateGolfFilterUI(golfStations.length);
 
+    const mapStations = golfOnly ? golfStations : stations;
+    ensureMap().then((handle) => {
+      updateStationMarkers(handle, mapStations, { fitBounds: !mapFitted });
+      mapFitted = true;
+    });
+
     // Already scoped to one region (the page heading says which) — a flat grid, no
     // redundant region sub-headers.
     const grid = document.createElement("div");
     grid.className = "station-cards";
-    for (const s of golfOnly ? golfStations : stations) grid.appendChild(renderCard(s));
+    for (const s of mapStations) grid.appendChild(renderCard(s));
     gridEl.appendChild(grid);
   } else {
+    ensureMap().then((handle) => updateStationMarkers(handle, stations));
+
     const byRegion = new Map();
     for (const s of stations) {
       if (!byRegion.has(s.region)) byRegion.set(s.region, []);

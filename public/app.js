@@ -173,6 +173,8 @@ function renderResult(data, hasGolf) {
     byDay.get(dayKey).push(h);
   }
 
+  const bestWindowsByDay = new Map();
+
   daysEl.innerHTML = "";
   for (const [dayKey, dayHours] of byDay) {
     const card = document.createElement("div");
@@ -194,6 +196,7 @@ function renderResult(data, hasGolf) {
     }
 
     const bestWindow = hasGolf ? findBestWindow(dayHours, currentDaylight) : null;
+    bestWindowsByDay.set(dayKey, bestWindow);
     if (bestWindow) {
       const startHH = String(new Date(bestWindow.times[0]).getUTCHours()).padStart(2, "0");
       const endHH = String((new Date(bestWindow.times[bestWindow.times.length - 1]).getUTCHours() + 1) % 24).padStart(2, "0");
@@ -234,6 +237,8 @@ function renderResult(data, hasGolf) {
     card.appendChild(scroll);
     daysEl.appendChild(card);
   }
+
+  renderForecastChart("forecast-chart", hours, { daylight: currentDaylight, bestWindowsByDay, hasGolf });
 
   resultEl.classList.remove("hidden");
 }

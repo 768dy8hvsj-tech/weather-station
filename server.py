@@ -194,6 +194,8 @@ def fetch_station_overview(hours_ahead: float = 1, stations: list[dict] | None =
             "id": station["id"],
             "name": station["name"],
             "region": station["region"],
+            "lat": station.get("lat"),
+            "lon": station.get("lon"),
             "time": hit["time"] if hit else None,
             "temp_c": hit["temp_c"] if hit else None,
             "wind_ms": hit["wind_ms"] if hit else None,

@@ -85,6 +85,43 @@ body {
   margin: 0 0 24px;
 }
 
+.station-map {
+  height: 340px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  background: var(--surface);
+}
+
+@media (max-width: 600px) {
+  .station-map {
+    height: 220px;
+  }
+}
+
+.station-marker-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--marker-color);
+  color: var(--marker-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.station-marker-dot svg {
+  width: 15px;
+  height: 15px;
+}
+
+.leaflet-tooltip.leaflet-tooltip-top {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .slider-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -305,6 +342,78 @@ body {
 .reliability-title {
   font-size: 13px;
   font-weight: 600;
+}
+
+.forecast-chart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 4px 4px;
+  margin-bottom: 20px;
+}
+
+.forecast-chart-svg {
+  width: 100%;
+  height: 220px;
+  display: block;
+  overflow: visible;
+}
+
+.chart-temp-area {
+  fill: color-mix(in srgb, var(--accent) 14%, transparent);
+  stroke: none;
+}
+
+.chart-temp-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-best-band {
+  fill: color-mix(in srgb, var(--good) 12%, transparent);
+}
+
+.chart-gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-day-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.chart-axis-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+}
+
+.chart-precip-bar {
+  fill: var(--rain);
+  opacity: 0.55;
+}
+
+.chart-precip-bar-snow {
+  fill: var(--snow);
+  opacity: 0.55;
+}
+
+.chart-hover-dot {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.chart-hover-dot:hover {
+  fill: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.chart-wind-lane {
+  color: var(--text-muted);
 }
 
 .reliability-grade {
